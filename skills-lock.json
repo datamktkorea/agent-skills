@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "git-commit": {
+      "source": "datamktkorea/agent-skills",
+      "sourceType": "github",
+      "computedHash": "b89f9b58e023f796fa820ba0f4298ca49ba4cea8ba3bf87c1abd6b9c9ebd718f"
+    }
+  }
+}
