@@ -79,9 +79,10 @@ P0와 P1이 애매하면: "지금 이 순간 서비스를 전혀 못 쓰는 상�
 
 확인이 완료되면 아래 형식으로 마크다운 문서를 작성하고, 파일로 저장한다.
 
-**파일명 규칙:** `trigger-<주제를-kebab-case로>.md`
-- 예: `trigger-search-result-rendering.md`, `trigger-upload-progress-indicator.md`
-- 저장 위치: 사용자가 현재 작업 중인 디렉토리 (별도 지정이 없으면 현재 경로 기준)
+**파일명 규칙:** `docs/triggers/YYYYMMDD-{kebab-case-feature-name}.md`
+- 예: `docs/triggers/20260410-search-result-rendering.md`
+- `docs/triggers/` 디렉토리가 없으면 자동으로 생성한다. 사용자에게 확인을 구하지 않는다.
+- 저장 위치: 사용자가 현재 작업 중인 프로젝트 루트 기준
 
 ```markdown
 # 트리거 문서
