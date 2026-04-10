@@ -1,0 +1,22 @@
+{
+  "name": "datamktkorea-tools",
+  "owner": {
+    "name": "datamktkorea"
+  },
+  "metadata": {
+    "description": "Internal Claude Code plugins for datamktkorea team",
+    "pluginRoot": "."
+  },
+  "plugins": [
+    {
+      "name": "dmk-pipeline",
+      "source": "./dmk-pipeline",
+      "description": "AI-native development pipeline: trigger → service planning → feature planning → design → development → verification → deployment",
+      "author": {
+        "name": "datamktkorea"
+      },
+      "category": "productivity",
+      "keywords": ["pipeline", "planning", "github", "workflow"]
+    }
+  ]
+}
