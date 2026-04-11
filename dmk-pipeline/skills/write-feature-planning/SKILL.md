@@ -39,10 +39,93 @@ Save the resolved `{PROJECT}` — all paths below use `~/.pipeline/docs/{project
 
 ## Phase 1: Source Check (Autonomous)
 
-Before asking the user anything, read the most recently modified file in `~/.pipeline/docs/{project}/planning/`.
+Before asking the user anything, load the service planning document using the steps below.
 
-- If the planning directory does not exist or is empty, stop and output:
-  > "서비스 기획 문서를 찾을 수 없습니다. 먼저 `/write-service-planning` 으로 서비스 기획 문서를 작성해주세요."
+### Source: GitHub Issues (primary)
+
+1. Verify `gh` authentication:
+
+   ```bash
+   gh auth status
+   ```
+
+   If this fails, skip to **Source: Local File (fallback)**.
+
+2. Resolve the target repo from the project config (`repos` list). If multiple repos exist, ask the user to select one.
+
+3. Query the GitHub Project for Epics currently at **"Service Planning"** Pipeline Stage:
+
+   ```bash
+   gh api graphql -f query='
+     query($org: String!, $num: Int!) {
+       organization(login: $org) {
+         projectV2(number: $num) {
+           items(first: 50) {
+             nodes {
+               fieldValueByName(name: "Pipeline Stage") {
+                 ... on ProjectV2ItemFieldSingleSelectValue { name }
+               }
+               content {
+                 ... on Issue { number title repository { name } }
+               }
+             }
+           }
+         }
+       }
+     }
+   ' -f org="{ORG}" -F num={GITHUB_PROJECT_NUMBER} \
+   --jq '[.data.organization.projectV2.items.nodes[]
+     | select(.fieldValueByName.name == "Service Planning")
+     | select(.content != null)
+     | {number: .content.number, title: .content.title, repo: .content.repository.name}]'
+   ```
+
+4. Present the results:
+   - **One issue found** → use it automatically.
+   - **Multiple found** → ask:
+     > "어떤 Epic 이슈의 피쳐 기획을 작성할까요?
+     >
+     > 1. #12 Asset file upload 10MB limit
+     > 2. #9 TOC generation stuck on navigation
+     > 3. 다른 이슈 선택 (전체 Epic 보기)"
+   - **None found** → skip directly to step 5.
+
+5. If the user selects "0" or no results were found in step 3, fetch all open Epics sorted by most recently updated:
+
+   ```bash
+   gh issue list \
+     --repo {ORG}/{REPO} \
+     --label "pipeline:epic" \
+     --state open \
+     --limit 30 \
+     --json number,title,updatedAt \
+     --jq '.[] | "#\(.number) \(.title) (\(.updatedAt[:10]))"'
+   ```
+
+   If no issues are returned here either, skip to **Source: Local File (fallback)**.
+   Ask the user to select one.
+
+6. Fetch sub-issues of the selected Epic:
+
+   ```bash
+   gh api /repos/{ORG}/{REPO}/issues/{EPIC_NUMBER}/sub_issues \
+     --jq '.[] | {number: .number, title: .title, labels: [.labels[].name]}'
+   ```
+
+7. Find the sub-issue with label `pipeline:service-planning`. If not found, skip to **Source: Local File (fallback)**.
+
+8. Read the service planning sub-issue body:
+   ```bash
+   gh issue view {SUB_NUMBER} --repo {ORG}/{REPO} --json body,title -q '{title: .title, body: .body}'
+   ```
+
+### Source: Local File (fallback)
+
+Read the most recently modified file from `~/.pipeline/docs/{project}/planning/`.
+
+If the directory does not exist or is empty, stop and output:
+
+> "서비스 기획 문서를 찾을 수 없습니다. 먼저 `/write-service-planning` 으로 서비스 기획 문서를 작성해주세요."
 
 Once loaded, extract:
 
@@ -170,59 +253,59 @@ If data requirements are left blank without a clear reason, flag once:
 Generate a **single Markdown file** for the whole planning session. Each feature becomes a numbered task within the document.
 
 ```markdown
-# Feature Planning: {Planning Doc Title}
+# 피쳐 기획: {기획 문서 제목}
 
-**Date:** YYYY-MM-DD
-**Source:** docs/planning/{source-filename}
+**작성일:** YYYY-MM-DD
+**출처:** docs/planning/{source-filename}
 
 ---
 
-## Task 1: {Feature Name}
+## Task 1: {기능명}
 
-### Case List
+### 케이스 목록
 
-#### ✅ Happy Path
+#### ✅ 정상 흐름 (Happy Path)
 
-- {case}
+- {케이스}
 
-#### ⚠️ Edge Cases
+#### ⚠️ 엣지 케이스
 
-- {case}
+- {케이스}
 
-#### ❌ Error Cases
+#### ❌ 오류 케이스
 
-- {case}
+- {케이스}
 
-### Priority Table
+### 우선순위 테이블
 
-| Case       | Priority | Include this time |
-| ---------- | -------- | ----------------- |
-| Happy Path | P0       | Yes               |
-| {case}     | {P1/P2}  | {Yes/No}          |
+| 케이스    | 우선순위 | 이번 포함 여부 |
+| --------- | -------- | -------------- |
+| 정상 흐름 | P0       | 예             |
+| {케이스}  | {P1/P2}  | {예/아니오}    |
 
-### Requirements
+### 요구사항
 
-**Goal:** {1-sentence goal}
-**Target User:** {role}
-**Success Criteria:** {measurable}
+**목표:** {한 문장 목표}
+**대상 유저:** {역할}
+**성공 기준:** {측정 가능한 기준}
 
 **IN Scope:**
 
-- {item}
+- {항목}
 
 **OUT of Scope:**
 
-- {item}
+- {항목}
 
-**Data Requirements:** {what, where — or "None"}
-**Dependencies:** {list — or "None"}
-**Target Deadline:** {date or TBD}
+**데이터 요구사항:** {무엇을, 어디에 — 또는 "없음"}
+**의존성:** {목록 — 또는 "없음"}
+**목표 마감일:** {날짜 또는 미정}
 
 ---
 
-## Task 2: {Feature Name}
+## Task 2: {기능명}
 
-{same structure}
+{동일한 구조}
 ```
 
 ### Save Path
@@ -233,9 +316,16 @@ Generate a **single Markdown file** for the whole planning session. Each feature
 
 ### Document Language
 
-Write all content in English. Korean is acceptable only for names with no English equivalent.
+Write all output document content in Korean.
 
 ### After Saving
 
 > "✅ **Feature planning document saved:** `docs/feature/YYYYMMDD-{name}.md`
 > Next step is design. Review the case list and requirements with your tech lead before moving to implementation."
+
+Then immediately ask:
+
+> "지금 바로 GitHub에 올릴까요? (y/n)"
+
+- **y** → trigger the `gh-pipeline-push` skill immediately for the saved file.
+- **n** → end here.

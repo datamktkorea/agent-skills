@@ -39,11 +39,84 @@ Save the resolved `{PROJECT}` — all paths below use `~/.pipeline/docs/{project
 
 ## Phase 1: Scope Check (Autonomous Judgment)
 
-Before asking the user anything, read the trigger document from `~/.pipeline/docs/{project}/trigger/`.
+Before asking the user anything, load the trigger document using the steps below.
 
-- If multiple files exist, use the most recently modified one.
-- If the directory does not exist or contains no files, stop immediately:
-  > "트리거 문서를 찾을 수 없습니다. 먼저 `write-trigger` 스킬로 트리거 문서를 작성해주세요."
+### Source: GitHub Issues (primary)
+
+1. Verify `gh` authentication:
+
+   ```bash
+   gh auth status
+   ```
+
+   If this fails, skip to **Source: Local File (fallback)**.
+
+2. Resolve the target repo from the project config (`repos` list). If multiple repos exist, ask the user to select one.
+
+3. Query the GitHub Project for Epics currently at **"Trigger"** Pipeline Stage:
+
+   ```bash
+   gh api graphql -f query='
+     query($org: String!, $num: Int!) {
+       organization(login: $org) {
+         projectV2(number: $num) {
+           items(first: 50) {
+             nodes {
+               fieldValueByName(name: "Pipeline Stage") {
+                 ... on ProjectV2ItemFieldSingleSelectValue { name }
+               }
+               content {
+                 ... on Issue { number title repository { name } }
+               }
+             }
+           }
+         }
+       }
+     }
+   ' -f org="{ORG}" -F num={GITHUB_PROJECT_NUMBER} \
+   --jq '[.data.organization.projectV2.items.nodes[]
+     | select(.fieldValueByName.name == "Trigger")
+     | select(.content != null)
+     | {number: .content.number, title: .content.title, repo: .content.repository.name}]'
+   ```
+
+4. Present the results:
+   - **One issue found** → use it automatically.
+   - **Multiple found** → ask:
+     > "어떤 트리거 이슈를 기반으로 작성할까요?
+     >
+     > 1. #12 Asset file upload 10MB limit
+     > 2. #9 TOC generation stuck on navigation
+     > 3. 다른 이슈 선택 (전체 Epic 보기)"
+   - **None found** → skip directly to step 5.
+
+5. If the user selects "0" or no results were found in step 3, fetch all open Epics sorted by most recently updated:
+
+   ```bash
+   gh issue list \
+     --repo {ORG}/{REPO} \
+     --label "pipeline:epic" \
+     --state open \
+     --limit 30 \
+     --json number,title,updatedAt \
+     --jq '.[] | "#\(.number) \(.title) (\(.updatedAt[:10]))"'
+   ```
+
+   If no issues are returned here either, skip to **Source: Local File (fallback)**.
+   Ask the user to select one.
+
+6. Read the selected issue body as the trigger document:
+   ```bash
+   gh issue view {NUMBER} --repo {ORG}/{REPO} --json body,title -q '{title: .title, body: .body}'
+   ```
+
+### Source: Local File (fallback)
+
+Read the most recently modified file from `~/.pipeline/docs/{project}/trigger/`.
+
+If the directory does not exist or contains no files, stop immediately:
+
+> "트리거 문서를 찾을 수 없습니다. 먼저 `write-trigger` 스킬로 트리거 문서를 작성해주세요."
 
 Once the trigger document is read successfully, analyze its content and decide autonomously whether a service planning document is needed.
 
@@ -104,7 +177,7 @@ If the user gives a directional answer with no concrete flow (e.g., "더 좋아�
 
 ### Problem Statement Rule
 
-Use the Problem Statement from the trigger document as-is. Translate to English if needed since the document language is English.
+Use the Problem Statement from the trigger document as-is.
 
 If the trigger document's Problem Statement is missing or lacks any of the three elements below, stop immediately.
 
@@ -148,37 +221,37 @@ flowchart TD
 ### Output File Format
 
 ```markdown
-# Service Planning: {Feature Name}
+# 서비스 기획: {기능명}
 
-**Date:** YYYY-MM-DD
-**Trigger Type:** {trigger document — trigger type}
-**Trigger Source:** {trigger document — background context summary}
+**작성일:** YYYY-MM-DD
+**트리거 유형:** {trigger document — trigger type}
+**트리거 배경:** {trigger document — background context summary}
 
 ---
 
 ## Problem Statement
 
-{trigger document — Problem Statement (translated to English)}
+{trigger document — Problem Statement}
 
 ---
 
-## AS-IS Flow
+## AS-IS 흐름
 
-{Mermaid flowchart based on Q1}
-
----
-
-## TO-BE Flow
-
-{Mermaid flowchart based on Q3 (includes AI failure branch if Q2 is 'yes')}
+{Q1 기반 Mermaid 플로우차트}
 
 ---
 
-## Scope Summary
+## TO-BE 흐름
 
-- **Affected screens:** {list only items where changes occur, by comparing AS-IS and TO-BE nodes}
-- **Key changes:** {bullet points of what differs in TO-BE}
-- **Includes AI feature:** Yes / No
+{Q3 기반 Mermaid 플로우차트 (Q2가 'Yes'이면 AI 실패 분기 포함)}
+
+---
+
+## 범위 요약
+
+- **영향 받는 화면:** {AS-IS와 TO-BE 노드를 비교해 변경이 발생하는 항목만 나열}
+- **주요 변경 사항:** {TO-BE에서 달라지는 점을 불릿으로 정리}
+- **AI 기능 포함 여부:** 예 / 아니오
 ```
 
 ### Save Path
@@ -189,9 +262,16 @@ flowchart TD
 
 ### Document Language
 
-Write all document content in English — section headings, Problem Statement, and Mermaid node text.
+Write all output document content in Korean — section headings, Problem Statement, and Mermaid node text.
 
 After saving, output the following message:
 
 > "Service planning document saved: `docs/planning/YYYYMMDD-{feature-name}.md`
 > Next step is feature planning. Write a case list and requirements doc for each node in the TO-BE flow."
+
+Then immediately ask:
+
+> "지금 바로 GitHub에 올릴까요? (y/n)"
+
+- **y** → trigger the `gh-pipeline-push` skill immediately for the saved file.
+- **n** → end here.
