@@ -1,5 +1,7 @@
 # Agent Skills Guide
 
+Create/Imporve/Modify skills in this repo.
+
 ## Creating a Skill
 
 - Always use `/skill-creator` skill.
