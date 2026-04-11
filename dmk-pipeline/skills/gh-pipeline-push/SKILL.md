@@ -5,7 +5,15 @@ description: Publishes locally created pipeline documents (from write-trigger, w
 
 # gh-pipeline-push
 
-Publishes a local planning document to a GitHub Issue and registers it on the pipeline board.
+Publishes a local pipeline document to GitHub and registers it on the pipeline board.
+
+**Core model — Epic + Sub-issues:**
+
+| Stage | Action |
+|---|---|
+| Trigger | Create a new parent Issue (the Epic). One Issue per feature/bug, tracked end-to-end. |
+| Service Planning / Feature Planning / Design | Create a sub-issue under the parent. Update Pipeline Stage on the parent. |
+| Development / Verification / Deployment | Create a sub-issue under the parent. Update Pipeline Stage on the parent. |
 
 Works from any directory — reads config from `~/.pipeline/config.json` and docs from `~/.pipeline/docs/{project}/`.
 
@@ -93,7 +101,7 @@ If no files are found, stop:
 
 ## Step 3 — Select target repo
 
-Show the repos from config and let the user choose where to create the Issue:
+Show the repos from config and let the user choose:
 
 ```
 Which repo should this Issue be created in?
@@ -112,74 +120,149 @@ If validation fails, ask the user to confirm or pick again.
 
 ---
 
-## Step 4 — Link to previous stage Issue (skip for Trigger)
+## Step 4 — Find parent Issue (all stages except Trigger)
 
-| Publishing stage | Previous stage   |
-| ---------------- | ---------------- |
-| Service Planning | Trigger          |
-| Feature Planning | Service Planning |
-| Design           | Feature Planning |
-| Development      | Design           |
-| Verification     | Development      |
-| Deployment       | Verification     |
+**Skip this step for Trigger** — Trigger creates the parent Issue itself.
 
-Fetch recent open Issues from the previous stage in the selected repo:
+For all other stages, find the parent Epic Issue:
 
 ```bash
 gh issue list \
   --repo {ORG}/{REPO} \
-  --label "pipeline:{PREV_STAGE_KEBAB}" \
+  --label "pipeline:epic" \
   --state open --limit 10 \
   --json number,title,createdAt \
   --jq '.[] | "#\(.number) \(.title) (\(.createdAt[:10]))"'
 ```
 
-Show the list and let the user pick:
+Show the list and ask the user to select the parent:
 
 ```
-Select the Trigger Issue to link:
+Select the parent Trigger Issue:
 
 1. #12 Asset file upload 10MB limit (2026-04-08)
-2. Skip — publish without linking
+2. #9 TOC generation stuck on navigation (2026-04-07)
 ```
+
+Save the selected parent Issue number and repo.
 
 ---
 
-## Step 5 — Create GitHub Issue
+## Step 5 — Publish the document
+
+### A. Trigger stage → Create parent Issue
 
 Extract the title from the MD file using this priority order:
 
-1. First `# Heading` — but skip if it is a generic template heading (e.g., "트리거 문서", "서비스 기획", "Feature Planning", "Service Planning: ...")
+1. First `# Heading` — skip if it is a generic template heading (e.g., "트리거 문서", "서비스 기획", "Feature Planning", "Service Planning: ...")
 2. Second `# Heading` or first `## Heading` — if the first was generic
 3. Filename without date prefix and extension, converted to Title Case (e.g., `20260410-asset-file-upload-10mb-limit.md` → `Asset File Upload 10MB Limit`)
 
-Always prepend the stage in brackets: `[Trigger] {title}`, `[Service Planning] {title}`, etc.
+```bash
+gh issue create \
+  --repo {ORG}/{REPO} \
+  --title "{title}" \
+  --body "$(cat {FILE_PATH})" \
+  --label "pipeline:epic"
+```
+
+Save the resulting Issue URL and number.
+
+### B. Service Planning / Feature Planning / Design → Create sub-issue
+
+Create a sub-issue and link it to the parent Issue:
+
+```bash
+# 1. Create sub-issue
+gh issue create \
+  --repo {ORG}/{REPO} \
+  --title "[{STAGE_NAME}] {PARENT_TITLE}" \
+  --body "$(cat {FILE_PATH})" \
+  --label "pipeline:{stage-kebab}"
+```
+
+Save the resulting sub-issue number. Then get the sub-issue's database ID and link it to the parent Issue:
+
+```bash
+# 2. Get database ID of the new sub-issue (required by the API — not the issue number)
+SUB_DB_ID=$(gh api graphql -f query="query { repository(owner: \"{ORG}\", name: \"{REPO}\") { issue(number: {SUB_ISSUE_NUMBER}) { databaseId } } }" \
+  -q '.data.repository.issue.databaseId')
+
+# 3. Link to parent
+gh api --method POST \
+  /repos/{ORG}/{REPO}/issues/{PARENT_ISSUE_NUMBER}/sub_issues \
+  -F sub_issue_id=$SUB_DB_ID
+```
+
+Stage label and title prefix mapping:
+- Service Planning → label `pipeline:service-planning`, title prefix `[Service Planning]`
+- Feature Planning → label `pipeline:feature-planning`, title prefix `[Feature Planning]`
+- Design → label `pipeline:design`, title prefix `[Design]`
+
+### C. Development / Verification / Deployment → Create sub-issue
+
+Extract the title using the same priority order as Trigger.
 
 Stage label format (kebab-case):
-
-- Trigger → `pipeline:trigger`
-- Service Planning → `pipeline:service-planning`
-- Feature Planning → `pipeline:feature-planning`
-- Design → `pipeline:design`
 - Development → `pipeline:development`
 - Verification → `pipeline:verification`
 - Deployment → `pipeline:deployment`
 
 ```bash
+# 1. Create the sub-issue
 gh issue create \
   --repo {ORG}/{REPO} \
-  --title "{EXTRACTED_TITLE}" \
+  --title "{title}" \
   --body "$(cat {FILE_PATH})" \
   --label "pipeline:{STAGE_KEBAB}"
 ```
 
-Save the resulting Issue URL and number.
+Save the sub-issue number. Then get the database ID and link it to the parent Issue:
+
+```bash
+# 2. Get database ID (required by the API — not the issue number)
+SUB_DB_ID=$(gh api graphql -f query="query { repository(owner: \"{ORG}\", name: \"{REPO}\") { issue(number: {SUB_ISSUE_NUMBER}) { databaseId } } }" \
+  -q '.data.repository.issue.databaseId')
+
+# 3. Add sub-issue to parent
+gh api --method POST \
+  /repos/{ORG}/{REPO}/issues/{PARENT_ISSUE_NUMBER}/sub_issues \
+  -F sub_issue_id=$SUB_DB_ID
+```
 
 ---
 
-## Step 6 — Add to Project and set stage
+## Step 6 — Add to Project and update Pipeline Stage
 
-Add the Issue to the Project:
+**Status rules** — always update Status alongside Pipeline Stage:
+
+| Pipeline Stage | Status to set |
+|---|---|
+| Trigger | Todo |
+| Service Planning, Feature Planning, Design, Development, Verification | In Progress |
+| Deployment | Done |
+
+The `status_field_id` and option IDs for Status come from the project's Status field (separate from Pipeline Stage). Fetch them at runtime if not cached:
+
+```bash
+gh api graphql -f query='
+  query {
+    node(id: "{GITHUB_PROJECT_ID}") {
+      ... on ProjectV2 {
+        fields(first: 20) {
+          nodes {
+            ... on ProjectV2SingleSelectField { id name options { id name } }
+          }
+        }
+      }
+    }
+  }
+' --jq '.data.node.fields.nodes[] | select(.name == "Status" or .name == "Pipeline Stage")'
+```
+
+### For Trigger stage (new parent Issue)
+
+Add the Issue to the Project, set Pipeline Stage to Trigger, and set Status to **Todo**:
 
 ```bash
 ITEM_ID=$(gh project item-add {GITHUB_PROJECT_NUMBER} \
@@ -189,56 +272,102 @@ ITEM_ID=$(gh project item-add {GITHUB_PROJECT_NUMBER} \
   --jq '.id')
 ```
 
-Set the Pipeline Stage field:
-
 ```bash
+# Set Pipeline Stage
+gh api graphql -f query='
+  mutation {
+    updateProjectV2ItemFieldValue(input: {
+      projectId: "{GITHUB_PROJECT_ID}"
+      itemId: "{ITEM_ID}"
+      fieldId: "{PIPELINE_STAGE_FIELD_ID}"
+      value: { singleSelectOptionId: "{PIPELINE_STAGE_OPTION_ID}" }
+    }) { projectV2Item { id } }
+  }
+'
+
+# Set Status → Todo
 gh api graphql -f query='
   mutation {
     updateProjectV2ItemFieldValue(input: {
       projectId: "{GITHUB_PROJECT_ID}"
       itemId: "{ITEM_ID}"
       fieldId: "{STATUS_FIELD_ID}"
-      value: { singleSelectOptionId: "{OPTION_ID}" }
+      value: { singleSelectOptionId: "{STATUS_OPTION_ID_TODO}" }
     }) { projectV2Item { id } }
   }
 '
 ```
 
----
+### For all stages except Trigger (sub-issue)
 
-## Step 7 — Record parent link
+Sub-issues are automatically added to the Project when created (because the repo is connected to the Project). Leave sub-issues in the Project — they are visible on the board and can be filtered out by the user as needed.
 
-If the user selected a parent Issue, add a comment to the new Issue:
+Update Pipeline Stage and Status on the **parent Epic's** project item.
+
+Status by stage:
+- Service Planning, Feature Planning, Design, Development, Verification → **In Progress**
+- Deployment → **Done**
+
+For **Deployment** stage only — after updating Status to Done, also close the parent Issue:
 
 ```bash
-gh issue comment {NEW_ISSUE_NUMBER} \
+gh issue close {PARENT_ISSUE_NUMBER} \
   --repo {ORG}/{REPO} \
-  --body "**Pipeline link:** Relates to #{PARENT_ISSUE_NUMBER}"
+  --comment "Deployment complete. Closing Epic."
 ```
 
 ---
 
 ## Done
 
+**Trigger:**
 ```
-✅ GitHub Issue created
+✅ Parent Issue created
 
 Issue:   #{NUMBER} {TITLE}
 URL:     {ISSUE_URL}
 Repo:    {ORG}/{REPO}
-Project: {GITHUB_PROJECT_TITLE} → {STAGE}
-Linked:  #{PARENT_NUMBER} (if applicable)
+Project: Pipeline Stage → Trigger | Status → Todo
+```
+
+**Service Planning / Feature Planning / Design:**
+```
+✅ Sub-issue created
+
+Sub-issue: #{NUMBER} {TITLE}
+Parent:    #{PARENT_NUMBER} {PARENT_TITLE}
+Project:   Pipeline Stage → {STAGE} | Status → In Progress
+```
+
+**Development / Verification:**
+```
+✅ Sub-issue created
+
+Sub-issue: #{NUMBER} {TITLE}
+Parent:    #{PARENT_NUMBER} {PARENT_TITLE}
+Project:   Pipeline Stage → {STAGE} | Status → In Progress
+```
+
+**Deployment:**
+```
+✅ Sub-issue created. Epic closed.
+
+Sub-issue: #{NUMBER} {TITLE}
+Parent:    #{PARENT_NUMBER} {PARENT_TITLE} (closed)
+Project:   Pipeline Stage → Deployment | Status → Done
 ```
 
 ---
 
 ## Error Handling
 
-| Situation            | Response                                                        |
-| -------------------- | --------------------------------------------------------------- |
-| `gh` not installed   | "GitHub CLI is required: `brew install gh`"                     |
-| Not authenticated    | "Please run `gh auth login`."                                   |
-| Config missing       | Trigger `gh-pipeline-setup`                                     |
-| No MD files found    | "No documents found. Use a write-\* skill to create one first." |
-| Repo not found       | Ask user to confirm repo name                                   |
-| Issue creation fails | Print the error as-is and stop                                  |
+| Situation              | Response                                                        |
+| ---------------------- | --------------------------------------------------------------- |
+| `gh` not installed     | "GitHub CLI is required: `brew install gh`"                     |
+| Not authenticated      | "Please run `gh auth login`."                                   |
+| Config missing         | Trigger `gh-pipeline-setup`                                     |
+| No MD files found      | "No documents found. Use a write-\* skill to create one first." |
+| Repo not found         | Ask user to confirm repo name                                   |
+| Parent Issue not found | Ask user to provide the parent Issue number manually            |
+| Issue creation fails   | Print the error as-is and stop                                  |
+| Sub-issue link fails   | Warn the user and provide the manual linking command            |
