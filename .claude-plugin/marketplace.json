@@ -17,6 +17,16 @@
       },
       "category": "productivity",
       "keywords": ["pipeline", "planning", "github", "workflow"]
+    },
+    {
+      "name": "dmk-oneteam",
+      "source": "./dmk-oneteam",
+      "description": "AI-native team management and communication tools. Helps the team standardize documentation and work together as one unit.",
+      "author": {
+        "name": "datamktkorea"
+      },
+      "category": "productivity",
+      "keywords": ["team", "management", "communication", "collaboration"]
     }
   ]
 }
