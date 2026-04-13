@@ -61,6 +61,8 @@ From the source, extract the following:
 
 Compose the meeting notes draft using this template. If a section has no content, write "해당 없음." — never omit the section.
 
+Tables (Decisions Made, Action Items) will be rendered as Notion Table blocks in Phase 4.
+
 ```markdown
 # 회의록: {meeting title or main agenda item}
 
@@ -83,6 +85,9 @@ Compose the meeting notes draft using this template. If a section has no content
 
 ### 3. Decisions Made (의사 결정 사항)
 
+Only include items that were explicitly and unambiguously decided in the meeting.
+If a decision is ambiguous, do NOT place it here — place it in Discussion / Context with a `[결정 여부 불명확]` tag.
+
 | 결정 내용  | 이유        |
 | ---------- | ----------- |
 | {decision} | {reasoning} |
@@ -101,6 +106,7 @@ Compose the meeting notes draft using this template. If a section has no content
 
 - {key discussion point}
 - {speaker name}: {opinion, prediction, or proposal attributed to that person}
+- `[결정 여부 불명확]` {item that was discussed but it was unclear whether a decision was reached}
 
 ---
 
@@ -176,17 +182,52 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
         "object": "block", "type": "heading_2",
         "heading_2": { "rich_text": [{ "text": { "content": "Decisions Made (의사 결정 사항)" } }] }
       },
-      ... (decisions as bulleted_list_item blocks)
+      {
+        "object": "block", "type": "table",
+        "table": {
+          "table_width": 2,
+          "has_column_header": true,
+          "has_row_header": false,
+          "children": [
+            {
+              "object": "block", "type": "table_row",
+              "table_row": { "cells": [
+                [{ "type": "text", "text": { "content": "결정 내용" } }],
+                [{ "type": "text", "text": { "content": "이유" } }]
+              ]}
+            },
+            ... (one table_row block per decision)
+          ]
+        }
+      },
       {
         "object": "block", "type": "heading_2",
         "heading_2": { "rich_text": [{ "text": { "content": "Action Items (액션 아이템) ★" } }] }
       },
-      ... (action items as bulleted_list_item blocks: "Task | DRI | Due Date" format)
+      {
+        "object": "block", "type": "table",
+        "table": {
+          "table_width": 3,
+          "has_column_header": true,
+          "has_row_header": false,
+          "children": [
+            {
+              "object": "block", "type": "table_row",
+              "table_row": { "cells": [
+                [{ "type": "text", "text": { "content": "Task" } }],
+                [{ "type": "text", "text": { "content": "DRI" } }],
+                [{ "type": "text", "text": { "content": "Due Date" } }]
+              ]}
+            },
+            ... (one table_row block per action item)
+          ]
+        }
+      },
       {
         "object": "block", "type": "heading_2",
         "heading_2": { "rich_text": [{ "text": { "content": "Discussion / Context (주요 논의 내용)" } }] }
       },
-      ... (discussion points as bulleted_list_item blocks)
+      ... (discussion points as bulleted_list_item blocks; ambiguous items prefixed with "[결정 여부 불명확]")
       {
         "object": "block", "type": "heading_2",
         "heading_2": { "rich_text": [{ "text": { "content": "Parking Lot (보류 안건)" } }] }
@@ -224,7 +265,7 @@ If the user confirms corrections, update the Notion page via the Blocks API (`PA
 - **Strict objectivity.** Do not add your own interpretation or logical leaps. Only write what was explicitly stated in the source.
 - **Attribute opinions to speakers.** A participant's claim or prediction is not a fact. Write it as "{이름}: ~할 것으로 예상" rather than stating it as an established truth.
 - **One goal.** Even if multiple topics were discussed, the meeting goal is a single sentence capturing the primary intended outcome. If the user gives multiple goals, ask which one was the primary purpose.
-- **Decisions vs. discussion.** "We talked about X" belongs in Discussion / Context. "We decided on X" belongs in Decisions Made. Don't mix them.
+- **Decisions vs. discussion.** Only items that were explicitly and unambiguously concluded belong in Decisions Made. "We talked about X" → Discussion / Context. "We decided on X" → Decisions Made. If it is unclear whether a conclusion was reached, place it in Discussion / Context with a `[결정 여부 불명확]` tag — never guess or promote an ambiguous item into Decisions Made.
 - **DRI must be a person's name.** Never write "개발팀" or "마케팅팀" as a DRI. If the owner is genuinely unclear, write `[담당자 미정]`.
 - **Infer, but tag it.** If attendees aren't listed but names appear in the transcript, treat them as attendees and mark with `[추론]`.
 - **Config errors stop the flow.** If `~/.dmk-workflow/config.json` is missing or incomplete, do not proceed to publishing. Inform the user of the exact missing field.
