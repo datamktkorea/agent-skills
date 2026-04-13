@@ -95,7 +95,7 @@ If a decision is ambiguous, do NOT place it here — place it in Discussion / Co
 
 ### 4. Action Items (액션 아이템) ★
 
-| Task            | DRI                  | Due Date   |
+| 할 일           | 담당자               | 기한       |
 | --------------- | -------------------- | ---------- |
 | {specific task} | {person's full name} | {deadline} |
 
@@ -215,9 +215,9 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
             {
               "object": "block", "type": "table_row",
               "table_row": { "cells": [
-                [{ "type": "text", "text": { "content": "Task" } }],
-                [{ "type": "text", "text": { "content": "DRI" } }],
-                [{ "type": "text", "text": { "content": "Due Date" } }]
+                [{ "type": "text", "text": { "content": "할 일" } }],
+                [{ "type": "text", "text": { "content": "담당자" } }],
+                [{ "type": "text", "text": { "content": "기한" } }]
               ]}
             },
             ... (one table_row block per action item)
