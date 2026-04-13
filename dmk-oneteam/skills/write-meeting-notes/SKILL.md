@@ -70,10 +70,9 @@ Tables (Decisions Made, Action Items) will be rendered as Notion Table blocks in
 
 ### 1. Meta Information (기본 정보)
 
-- **Date & Time:** {date} {time}
-- **Attendees:** {attendee list}
-- **Absent:** {absentees, or 해당 없음}
-- **Goal / Agenda:** {single, clear goal for this meeting}
+- **미팅일시:** {date} {time}
+- **참석자:** {(회사명) 이름 외 N명 형식으로, 회사별로 묶어 표기. 마지막에 총 N명 추가. 예: (DMK) 이경준, (AK아이에스) 김민한 차장 외 1명, 총 5명.}
+- **아젠다:** {single, clear goal for this meeting}
 
 ---
 
@@ -104,15 +103,17 @@ If a decision is ambiguous, do NOT place it here — place it in Discussion / Co
 
 ### 5. Discussion / Context (주요 논의 내용)
 
-- {key discussion point}
-- {speaker name}: {opinion, prediction, or proposal attributed to that person}
-- `[결정 여부 불명확]` {item that was discussed but it was unclear whether a decision was reached}
+발언자 이름을 앞에 붙여 출처 명확히. 관련 논의가 여러 줄로 이어질 경우 들여쓰기로 계층 표현.
+
+- **{주제}**: {핵심 요점}
+  - {발언자 이름}: {의견/예측/제안}
+- `[결정 여부 불명확]` **{주제}**: {내용}
 
 ---
 
 ### 6. Parking Lot (보류 안건)
 
-- {deferred topic or idea}
+- {보류 항목}
 ```
 
 ---
@@ -261,11 +262,27 @@ If the user confirms corrections, update the Notion page via the Blocks API (`PA
 
 ## Rules
 
-- **Output language is always Korean.** Write the entire meeting notes document in Korean, regardless of what language the source material is in. Section headers follow the template exactly, and all content inside each section must be in Korean.
-- **Strict objectivity.** Do not add your own interpretation or logical leaps. Only write what was explicitly stated in the source.
-- **Attribute opinions to speakers.** A participant's claim or prediction is not a fact. Write it as "{이름}: ~할 것으로 예상" rather than stating it as an established truth.
-- **One goal.** Even if multiple topics were discussed, the meeting goal is a single sentence capturing the primary intended outcome. If the user gives multiple goals, ask which one was the primary purpose.
-- **Decisions vs. discussion.** Only items that were explicitly and unambiguously concluded belong in Decisions Made. "We talked about X" → Discussion / Context. "We decided on X" → Decisions Made. If it is unclear whether a conclusion was reached, place it in Discussion / Context with a `[결정 여부 불명확]` tag — never guess or promote an ambiguous item into Decisions Made.
-- **DRI must be a person's name.** Never write "개발팀" or "마케팅팀" as a DRI. If the owner is genuinely unclear, write `[담당자 미정]`.
-- **Infer, but tag it.** If attendees aren't listed but names appear in the transcript, treat them as attendees and mark with `[추론]`.
-- **Config errors stop the flow.** If `~/.dmk-workflow/config.json` is missing or incomplete, do not proceed to publishing. Inform the user of the exact missing field.
+**언어 및 형식**
+
+- 전체 한국어로 작성. 섹션 헤더는 템플릿 그대로.
+- TL;DR을 제외한 모든 섹션은 마크다운의 장점을 적극 활용해 가독성 우선. 줄글보다 bullet, 중요 단어는 **bold**, 계층이 있으면 들여쓰기 등을 사용.
+- 가운데점(·) 사용 자제. 쉼표로 대체 가능하면 쉼표 사용.
+- Em dash(—) 사용 금지. 쉼표, 괄호, 문장 분리로 대체.
+
+**내용 기준**
+
+- 엄격한 객관성. 소스에 명시된 내용만 기재, 추론/해석 금지.
+- 발언자 귀속. 의견, 예측, 제안은 반드시 "{이름}: ~" 형태로 출처 명시.
+- 아젠다는 단 하나. 여러 주제가 논의됐더라도 핵심 목적 한 문장으로.
+
+**섹션별 판단 기준**
+
+- Decisions Made: 회의에서 명시적, 명확하게 결론 난 항목만. 불명확하면 Discussion에 `[결정 여부 불명확]` 태그로.
+- DRI는 반드시 개인 이름. "개발팀", "마케팅팀" 금지. 불명확하면 `[담당자 미정]`.
+- Absent: 실제 결석자가 있을 때만 포함. 없으면 항목 자체 생략.
+- Parking Lot: 참석자가 "나중에 결정", "별도 논의" 등으로 명시적으로 보류한 전략/업무 항목만. 식사, 주차 등 운영 잡담 제외.
+- 이름 추론: 이름이 녹취에만 등장할 경우 참석자로 처리하되 `[추론]` 태그 추가.
+
+**발행 오류**
+
+- `~/.dmk-workflow/config.json`에 `notion_token` 또는 DB ID 누락 시 즉시 중단. 누락된 필드명을 사용자에게 안내.
