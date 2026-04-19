@@ -36,7 +36,7 @@ If no source is available, ask in sequence:
 3. "이 회의의 목표가 무엇이었나요? (단 하나의 목표)"
 4. "회의에서 어떤 내용들이 논의되었나요? 자유롭게 말씀해 주세요."
 5. "이 회의의 유형은 무엇인가요? (기획 / 의사결정 / 스탠드업 / 회고 / 브레인스토밍)"
-6. Read `~/.dmk-workflow/config.json` and list the available projects by name, then ask: "어느 프로젝트와 관련된 회의인가요? (번호로 선택하거나, 없으면 '없음'이라고 말씀해 주세요)"
+6. Read `~/.datamktkorea/config.json` and list the available projects by name, then ask: "어느 프로젝트와 관련된 회의인가요? (번호로 선택하거나, 없으면 '없음'이라고 말씀해 주세요)"
 
 ---
 
@@ -53,7 +53,7 @@ From the source, extract the following:
 - Main discussion threads — for opinions, predictions, or proposals, note the speaker's name so the source of the claim is clear
 - Deferred or unresolved topics
 - **Meeting Type** — infer from the content (기획 / 의사결정 / 스탠드업 / 회고 / 브레인스토밍). If it cannot be confidently inferred, ask the user: "이 회의의 유형이 어떻게 되나요? (기획 / 의사결정 / 스탠드업 / 회고 / 브레인스토밍)"
-- **Project** — Read `~/.dmk-workflow/config.json` and list the available projects by name. Ask the user: "어느 프로젝트와 관련된 회의인가요? (번호로 선택하거나, 없으면 '없음'이라고 말씀해 주세요)" If the user selects "없음", leave the `프로젝트` property empty. Skip this question only if the user already answered it in Source C.
+- **Project** — Read `~/.datamktkorea/config.json` and list the available projects by name. Ask the user: "어느 프로젝트와 관련된 회의인가요? (번호로 선택하거나, 없으면 '없음'이라고 말씀해 주세요)" If the user selects "없음", leave the `프로젝트` property empty. Skip this question only if the user already answered it in Source C.
 
 ---
 
@@ -122,22 +122,33 @@ If a decision is ambiguous, do NOT place it here — place it in Discussion / Co
 
 ### 4-1. Read config
 
-Read `~/.dmk-workflow/config.json` and extract:
+Read `~/.datamktkorea/config.json` and extract:
 
 - `notion_token`
 - `notion_dbs.meeting_notes_db` (Meeting Notes DB ID)
 - `notion_dbs.project_db` (Projects DB ID)
 
-If any of these values are missing, stop and tell the user: "~/.dmk-workflow/config.json에 `notion_token` 또는 DB ID가 없어요. 값을 확인하고 추가해 주세요."
+If any of these values are missing, stop and tell the user: "~/.datamktkorea/config.json에 `notion_token` 또는 DB ID가 없어요. 값을 확인하고 추가해 주세요."
 
 ### 4-2. Resolve Project page ID
 
-Query the Projects DB to find the page ID matching the project the user selected:
+**Step 1 — Get the data_source_id for the Projects DB:**
 
 ```bash
-curl -s -X POST "https://api.notion.com/v1/databases/{project_db}/query" \
+curl -s "https://api.notion.com/v1/databases/{project_db}" \
   -H "Authorization: Bearer {notion_token}" \
-  -H "Notion-Version: 2022-06-28" \
+  -H "Notion-Version: 2026-03-11" \
+  | jq '.data_sources[0].id'
+```
+
+Store the result as `{project_data_source_id}`.
+
+**Step 2 — Query the Projects DB:**
+
+```bash
+curl -s -X POST "https://api.notion.com/v1/data_sources/{project_data_source_id}/query" \
+  -H "Authorization: Bearer {notion_token}" \
+  -H "Notion-Version: 2026-03-11" \
   -H "Content-Type: application/json" \
   -d '{}' | jq '.results[] | {id: .id, name: .properties["[고객사명] 프로젝트명"].title[0].plain_text}'
 ```
@@ -146,97 +157,68 @@ Match by project name and store the page ID.
 
 ### 4-3. Create the Notion page
 
-Call the Notion Pages API to create a new page in the Meeting Notes DB:
+Pass properties and the full meeting notes body as a `markdown` string (see CLAUDE.md for API details). Use a heredoc to write the markdown clearly, then pass it through `jq` so newlines are escaped automatically.
 
 ```bash
+MARKDOWN=$(cat <<'EOF'
+## Goal / Agenda
+
+{goal}
+
+## TL;DR
+
+{tldr}
+
+## Decisions Made (의사 결정 사항)
+
+| 결정 내용 | 이유 |
+| --- | --- |
+| {decision} | {reasoning} |
+
+## Action Items (액션 아이템) ★
+
+| 할 일 | 담당자 | 기한 |
+| --- | --- | --- |
+| {task} | {owner} | {deadline} |
+
+## Discussion / Context (주요 논의 내용)
+
+{discussion bullet points}
+
+## Parking Lot (보류 안건)
+
+{parking lot bullet points}
+EOF
+)
+
 curl -s -X POST "https://api.notion.com/v1/pages" \
   -H "Authorization: Bearer {notion_token}" \
-  -H "Notion-Version: 2022-06-28" \
+  -H "Notion-Version: 2026-03-11" \
   -H "Content-Type: application/json" \
-  -d '{
-    "parent": { "database_id": "{meeting_notes_db}" },
-    "properties": {
-      "제목": { "title": [{ "text": { "content": "{meeting title}" } }] },
-      "날짜": { "date": { "start": "{YYYY-MM-DDTHH:MM:SS+09:00}" } },
-      "회의 유형": { "select": { "name": "{meeting type}" } },
-      "프로젝트": { "relation": [{ "id": "{project_page_id}" }] },
-      "상태": { "select": { "name": "Draft" } }
-    },
-    "children": [
-      {
-        "object": "block", "type": "heading_2",
-        "heading_2": { "rich_text": [{ "text": { "content": "Goal / Agenda" } }] }
+  -d "$(jq -n \
+    --arg md "$MARKDOWN" \
+    --arg title "{meeting title}" \
+    --arg date "{YYYY-MM-DDTHH:MM:SS+09:00}" \
+    --arg type "{meeting type}" \
+    --arg project_id "{project_page_id}" \
+    '{
+      parent: { database_id: "{meeting_notes_db}" },
+      properties: {
+        "제목": { title: [{ text: { content: $title } }] },
+        "날짜": { date: { start: $date } },
+        "회의 유형": { select: { name: $type } },
+        "프로젝트": { relation: [{ id: $project_id }] },
+        "상태": { select: { name: "Draft" } }
       },
-      {
-        "object": "block", "type": "paragraph",
-        "paragraph": { "rich_text": [{ "text": { "content": "{goal}" } }] }
-      },
-      {
-        "object": "block", "type": "heading_2",
-        "heading_2": { "rich_text": [{ "text": { "content": "TL;DR" } }] }
-      },
-      {
-        "object": "block", "type": "paragraph",
-        "paragraph": { "rich_text": [{ "text": { "content": "{tldr}" } }] }
-      },
-      {
-        "object": "block", "type": "heading_2",
-        "heading_2": { "rich_text": [{ "text": { "content": "Decisions Made (의사 결정 사항)" } }] }
-      },
-      {
-        "object": "block", "type": "table",
-        "table": {
-          "table_width": 2,
-          "has_column_header": true,
-          "has_row_header": false,
-          "children": [
-            {
-              "object": "block", "type": "table_row",
-              "table_row": { "cells": [
-                [{ "type": "text", "text": { "content": "결정 내용" } }],
-                [{ "type": "text", "text": { "content": "이유" } }]
-              ]}
-            },
-            ... (one table_row block per decision)
-          ]
-        }
-      },
-      {
-        "object": "block", "type": "heading_2",
-        "heading_2": { "rich_text": [{ "text": { "content": "Action Items (액션 아이템) ★" } }] }
-      },
-      {
-        "object": "block", "type": "table",
-        "table": {
-          "table_width": 3,
-          "has_column_header": true,
-          "has_row_header": false,
-          "children": [
-            {
-              "object": "block", "type": "table_row",
-              "table_row": { "cells": [
-                [{ "type": "text", "text": { "content": "할 일" } }],
-                [{ "type": "text", "text": { "content": "담당자" } }],
-                [{ "type": "text", "text": { "content": "기한" } }]
-              ]}
-            },
-            ... (one table_row block per action item)
-          ]
-        }
-      },
-      {
-        "object": "block", "type": "heading_2",
-        "heading_2": { "rich_text": [{ "text": { "content": "Discussion / Context (주요 논의 내용)" } }] }
-      },
-      ... (discussion points as bulleted_list_item blocks; ambiguous items prefixed with "[결정 여부 불명확]")
-      {
-        "object": "block", "type": "heading_2",
-        "heading_2": { "rich_text": [{ "text": { "content": "Parking Lot (보류 안건)" } }] }
-      },
-      ... (parking lot items as bulleted_list_item blocks)
-    ]
-  }'
+      markdown: $md
+    }')"
 ```
+
+**Markdown authoring rules:**
+- Use `##` for section headings (maps to Notion heading_2).
+- Tables: standard GFM pipe syntax; include a separator row (`| --- |`).
+- Bullet lists: prefix with `- `.
+- Bold: `**text**`. Inline code: `` `text` ``.
 
 ### 4-4. Report result
 
@@ -256,7 +238,26 @@ After publishing, automatically flag any of the following and prompt the user to
 - Action items with no named DRI → "담당자가 불분명한 액션 아이템이 {N}건 있어요. 담당자를 지정해 주시면 업데이트할게요."
 - TL;DR longer than 3 sentences → compress automatically before publishing.
 
-If the user confirms corrections, update the Notion page via the Blocks API (`PATCH /v1/blocks/{block_id}`) rather than recreating the page.
+If the user confirms corrections, update the Notion page via the Markdown API rather than recreating the page:
+
+```bash
+curl -s -X PATCH "https://api.notion.com/v1/pages/{page_id}/markdown" \
+  -H "Authorization: Bearer {notion_token}" \
+  -H "Notion-Version: 2026-03-11" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "update_content",
+    "update_content": {
+      "content_updates": [
+        {
+          "old_str": "{exact text to find}",
+          "new_str": "{replacement text}",
+          "replace_all_matches": false
+        }
+      ]
+    }
+  }'
+```
 
 ---
 
@@ -285,4 +286,4 @@ If the user confirms corrections, update the Notion page via the Blocks API (`PA
 
 **발행 오류**
 
-- `~/.dmk-workflow/config.json`에 `notion_token` 또는 DB ID 누락 시 즉시 중단. 누락된 필드명을 사용자에게 안내.
+- `~/.datamktkorea/config.json`에 `notion_token` 또는 DB ID 누락 시 즉시 중단. 누락된 필드명을 사용자에게 안내.

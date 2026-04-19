@@ -1,9 +1,0 @@
-{
-  "name": "dmk-pipeline",
-  "description": "AI-native development pipeline skills. Covers the full cycle from trigger through deployment: write-trigger, write-service-planning, write-feature-planning, gh-pipeline-setup, gh-pipeline-push.",
-  "version": "0.1.0",
-  "author": {
-    "name": "datamktkorea"
-  },
-  "repository": "https://github.com/datamktkorea/agent-skills"
-}
