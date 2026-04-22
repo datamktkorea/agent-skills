@@ -75,20 +75,27 @@ If the user writes something that fails self-check, **do not advance**. Push bac
 Ask:
 
 > "이 트리거가 Notion Requests DB의 기존 요청에 연결되나요?  
-> (a) 네: 어느 요청인지 알려주세요 (제목 검색 가능)  
+> (a) 네: **페이지 제목 또는 URL**을 알려주세요  
 > (b) 아니요: 새로 시작하겠습니다"
 
 If (a):
 
-- Search by title keyword:
+- **URL 또는 32자 페이지 ID를 받은 경우**: 바로 fetch.
+  ```bash
+  fetch-page-properties.sh "<url-or-id>"
+  fetch-page.sh "<url-or-id>" --markdown-only
+  ```
+  URL 형태면 `fetch-page.sh` 내부에서 ID를 파싱합니다. 가져온 properties의 `parent.data_source_id`가 `requests_db`의 data source와 일치하는지 확인 (Requests DB 소속 페이지인지 검증). 아니면 사용자에게 "이 페이지는 Requests DB 소속이 아닙니다"라고 알리고 다시 물어봅니다.
+
+- **제목 키워드만 받은 경우**: 검색 후 선택.
   ```bash
   query-db.sh requests_db \
     --filter "$(jq -n --arg k "<keyword>" '{property:"이름", title:{contains:$k}}')" \
     --page-size 5
   ```
-- From the `.results[]`, show title (`.properties["이름"].title[0].plain_text`), 유형 (`.properties["유형"].select.name`), and 생성 일시. Let the user pick by number.
-- Fetch the selected Request's body: `fetch-page.sh <page_id> --markdown-only` and summarize.
-- Save the Request's `id` for later (will become the value of the `Requests DB` relation property on the new Trigger).
+  `.results[]`에서 title (`.properties["이름"].title[0].plain_text`), 유형 (`.properties["유형"].select.name`), 생성 일시를 보여주고 번호로 선택받습니다.
+
+- 어느 경로든: Request의 `id`를 저장 (이후 새 Trigger의 `Requests DB` relation 값이 됨).
 
 If (b):
 

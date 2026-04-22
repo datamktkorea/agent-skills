@@ -197,6 +197,37 @@ test -d "{PATH}" && echo "OK" || echo "MISSING"
 
 If any is MISSING: tell user to fix code.json and stop.
 
+### 1.1a Verify the repo state being read
+
+The skill reads files from the user's local working tree. **Do not `git checkout`, `git stash`, or mutate state** — the user owns their workspace. The only job here is to make the state explicit so the Spec's file:line references are pinned to a known commit.
+
+For each target repo, run:
+
+```bash
+cd "{repo_path}"
+branch=$(git rev-parse --abbrev-ref HEAD)
+sha=$(git rev-parse --short HEAD)
+dirty=$(git status --porcelain | wc -l | tr -d ' ')
+ahead_behind=$(git rev-list --left-right --count "@{u}...HEAD" 2>/dev/null || echo "no-upstream")
+```
+
+Show the user a single confirmation block per repo:
+
+> "**{repo_name}** 현재 상태:
+> - 브랜치: `{branch}` @ `{sha}`
+> - 변경사항: {dirty}개 파일 (uncommitted)
+> - 원격 대비: {ahead_behind} (left=behind, right=ahead)
+>
+> 이 상태로 코드 읽고 Spec 작성할까요?
+> - (a) 네, 이대로 진행
+> - (b) 다른 브랜치/상태에서 읽고 싶음 → 직접 `git checkout` 후 다시 시작해주세요"
+
+If (b) → stop and let the user switch themselves. If (a) → proceed.
+
+**Record per repo** for use in the Spec body: `{repo_name}: {branch} @ {sha}` + `(working tree clean)` or `(N uncommitted changes)`. This string goes into the Spec's "위치 힌트" section header so every file:line reference below it is pinned to that commit — months later someone can reproduce the exact state read.
+
+Rationale: a Spec that says `src/foo.ts:L42` without a commit is ambiguous once the file changes. A Spec that says `{repo_key}: {branch} @ {sha} — src/foo.ts:L42` is reproducible forever.
+
 ### 1.2 Build Implementation Map
 
 Based on category + Request body, find the relevant code. Read up to **15 files**. Depth over breadth.
@@ -243,7 +274,13 @@ AI-discovered related issues (if any):
 
 Report to user:
 
-> "코드 분석 완료: {REPO}: 파일 {N}개 읽음, 변경 후보 {M}곳, 호출 체인 {K}단계."
+> "코드 분석 완료: {REPO} ({branch} @ {sha}): 파일 {N}개 읽음, 변경 후보 {M}곳, 호출 체인 {K}단계."
+
+**Pinned ref carryover:** the branch/sha recorded in 1.1a MUST appear once in the Spec body, near the top of whichever section first cites file:line (for most templates this is "위치 힌트" or "관련 코드"). Render as a single line like:
+
+> 기준: `{repo_key}` @ `{branch}` (sha `{short_sha}`, working tree clean)
+
+This is non-negotiable — a Spec without a pinned ref produces ambiguous file:line references once the code moves on.
 
 ### 1.3 Announce Category & Template
 
