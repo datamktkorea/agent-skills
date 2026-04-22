@@ -23,12 +23,9 @@ The deliverable is a new page in Notion **Specs DB** linked to a parent Request,
 
 ## Prerequisites
 
-### 1. Notion MCP connected
+### 1. `notion-api` skill preconditions met
 
-Check by listing available tools for `mcp__notion__*`. If missing:
-
-> "먼저 Notion MCP를 연결해주세요. 연결 없이는 Spec을 저장할 수 없습니다."
-> and stop.
+All Notion access goes through the `notion-api` skill's bash scripts. Its preconditions apply verbatim: `~/.datamktkorea/config.json` with `notion_token` + `notion_dbs` map, `jq` installed, the Integration shared with the relevant databases (`requests_db`, `specs_db`, `projects_db`). If any script exits with code 2 (precondition failure), surface its stderr hint to the user and stop.
 
 ### 2. `~/.datamktkorea/code.json` exists
 
@@ -54,18 +51,23 @@ If missing, stop immediately:
 
 Do NOT fall back to interactive path entry or git-remote detection. Code.json is the single source of truth for repo paths.
 
-### 3. Fixed DB IDs for this workspace
+### 3. Do NOT use Notion templates
 
-- Specs DB: `33fcd0143f6e80729b5ad64386e62cfc`
-- Specs data source: `33fcd014-3f6e-80d9-9ad9-000b760cd632`
-- Requests DB: `33ecd0143f6e8037adcee2672e0abd0c`
-- Requests data source: `33ecd014-3f6e-80c0-b177-000b3e08ac88`
-- Projects DB: `b6ce9cb2184e47f0ba8c370b03dacf49`
-- Projects data source: `d47fc205-0235-4dc6-b156-843e80a928e7`
+The skill writes page content directly via `create-page.sh`. Any legacy Notion template in Specs DB is ignored. All content structure comes from `templates/*.md` in this skill.
 
-### 4. Do NOT use Notion templates
+## Scripts used
 
-The skill writes page content directly via `mcp__notion__notion-create-pages`. Any legacy Notion template in Specs DB is ignored. All content structure comes from `templates/*.md` in this skill.
+Shorthand used throughout this skill. Full signatures and behavior live in `notion-api/SKILL.md`.
+
+| Shorthand | Resolves to |
+|---|---|
+| `query-db.sh` | `${CLAUDE_PLUGIN_ROOT}/skills/notion-api/scripts/query-db.sh` |
+| `fetch-page.sh` | `${CLAUDE_PLUGIN_ROOT}/skills/notion-api/scripts/fetch-page.sh` |
+| `fetch-page-properties.sh` | `${CLAUDE_PLUGIN_ROOT}/skills/notion-api/scripts/fetch-page-properties.sh` |
+| `create-page.sh` | `${CLAUDE_PLUGIN_ROOT}/skills/notion-api/scripts/create-page.sh` |
+| `update-page.sh` | `${CLAUDE_PLUGIN_ROOT}/skills/notion-api/scripts/update-page.sh` |
+
+DB references use config keys: `requests_db`, `specs_db`, `projects_db`. Raw UUIDs live only in `~/.datamktkorea/config.json` and the authoritative schema in `notion-api/SKILL.md`.
 
 ## Core Principle: Forcing Functions + Grounded Code
 
@@ -97,23 +99,46 @@ Ask:
 > (b) 특정 Request URL/ID 지정
 > (c) 키워드로 검색"
 
-**If (a)**: query Requests DB for recent open items:
+**If (a)**: query Requests DB with a server-side filter for open Spec-eligible items:
 
+```bash
+query-db.sh requests_db --page-size 15 --filter '{
+  "and": [
+    {"or": [
+      {"property":"상태","status":{"equals":"미할당"}},
+      {"property":"상태","status":{"equals":"할당"}}
+    ]},
+    {"or": [
+      {"property":"유형","select":{"equals":"기능 에러"}},
+      {"property":"유형","select":{"equals":"기능 추가"}},
+      {"property":"유형","select":{"equals":"기능 변경"}},
+      {"property":"유형","select":{"equals":"기능 개선"}}
+    ]}
+  ]
+}'
 ```
-mcp__notion__notion-search(
-  query = "",
-  data_source_url = "collection://33ecd014-3f6e-80c0-b177-000b3e08ac88",
-  page_size = 15
-)
+
+Show up to 10 results with title (`.properties["이름"].title[0].plain_text`), 유형 (`.properties["유형"].select.name`), 우선순위, and 요청자.
+
+**If (b)**: fetch directly with `fetch-page-properties.sh <page_id_or_url>` plus `fetch-page.sh <...> --markdown-only` when body is needed.
+
+**If (c)**: run the same query with an added title filter:
+
+```bash
+query-db.sh requests_db --page-size 10 --filter "$(jq -n --arg k "<keyword>" '{
+  and: [
+    {property:"이름", title:{contains:$k}},
+    {or: [
+      {property:"유형", select:{equals:"기능 에러"}},
+      {property:"유형", select:{equals:"기능 추가"}},
+      {property:"유형", select:{equals:"기능 변경"}},
+      {property:"유형", select:{equals:"기능 개선"}}
+    ]}
+  ]
+}')"
 ```
 
-Filter client-side for `상태 ∈ {미할당, 할당}` and `유형 ∈ {기능 에러, 기능 추가, 기능 변경, 기능 개선}`. Show up to 10 results with title + 유형 + 우선순위 + 요청자.
-
-**If (b)**: fetch directly.
-
-**If (c)**: run search with keyword.
-
-Save selected Request's page URL, title, 유형, 우선순위, Project relation value.
+Save the selected Request's `id`, title, 유형, 우선순위, and Project relation (first item in `.properties["Projects DB"].relation`).
 
 ### 0.2 Derive Category
 
@@ -144,11 +169,11 @@ Save Project page URL and fetch Project's `엔티티 약어` + `프로젝트 약
 
 ### 0.4 Fetch Request body
 
-```
-mcp__notion__notion-fetch(id = "<request-page-url>")
+```bash
+fetch-page.sh "<request-page-id-or-url>" --markdown-only
 ```
 
-Save the body text as `{REQUEST_CONTEXT}`: this is the raw intake that the user wrote. It will seed the Q&A and help pre-fill answers.
+Save the markdown as `{REQUEST_CONTEXT}`: this is the raw intake that the user wrote. It will seed the Q&A and help pre-fill answers.
 
 ## Phase 1: Code Reading (Non-Negotiable)
 
@@ -280,33 +305,33 @@ Ask:
 
 ### 4.2 Write to Notion
 
-Use `mcp__notion__notion-create-pages`:
+Compose the properties with `jq` and call `create-page.sh`, piping the compiled body via stdin:
 
-```
-parent: { type: "data_source_id", data_source_id: "33fcd014-3f6e-80d9-9ad9-000b760cd632" }
-pages: [{
-  properties: {
-    "이름": "<generated title>",
-    "Requests DB": "<parent request URL>",
-    "Projects DB": "<project URL>"
-  },
-  content: "<compiled markdown body from template>"
-}]
+```bash
+properties=$(jq -n \
+  --arg title "<generated title>" \
+  --arg req "<request_id>" \
+  --arg proj "<project_id>" \
+  '{
+    "이름":        {"title":[{"text":{"content":$title}}]},
+    "Requests DB": {"relation":[{"id":$req}]},
+    "Projects DB": {"relation":[{"id":$proj}]}
+  }')
+
+create-page.sh --parent specs_db --properties "$properties" --markdown - <<'EOF'
+<compiled markdown body from template>
+EOF
 ```
 
-Do NOT set `유형` or `우선순위` directly: these are rollups from the Request and will populate automatically via the `Requests DB` relation.
+Do NOT set `유형` or `우선순위` directly: these are rollups from the Request and populate automatically via the `Requests DB` relation.
 
 ### 4.3 Update Request status
 
-Use `mcp__notion__notion-update-page` on the parent Request to set `상태 = 할당`:
+Mark the parent Request as `할당`:
 
-```
-mcp__notion__notion-update-page(
-  page_id = "<request-page-id>",
-  command = "update_properties",
-  properties = { "상태": "할당" },
-  content_updates = []
-)
+```bash
+update-page.sh "<request_id>" \
+  --properties '{"상태":{"status":{"name":"할당"}}}'
 ```
 
 ### 4.4 Report
@@ -325,7 +350,7 @@ Return the created page URL.
 
 ## Error Handling
 
-- **Notion MCP not connected** → stop at Prerequisites.
+- **notion-api precondition failed (exit 2)** → surface the script's stderr hint (missing config, jq, integration access) and stop.
 - **code.json missing** → stop at Prerequisites (do NOT fall back).
 - **Request 유형이 지원 대상 아님** → stop at Phase 0.2.
 - **Project relation empty on Request** → stop at Phase 0.3.
