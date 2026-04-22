@@ -37,13 +37,9 @@ N sub-Requests (in Requests DB)
 
 ## Prerequisites
 
-### 1. Notion MCP connected
+### 1. `notion-api` skill preconditions met
 
-Check by confirming `mcp__notion__*` tools are available. If not:
-
-> "먼저 Notion MCP를 연결해주세요. 연결 없이는 분해 결과를 저장할 수 없습니다."
-
-and stop.
+All Notion access goes through the `notion-api` skill's bash scripts. Its preconditions apply verbatim: `~/.datamktkorea/config.json` with `notion_token` + `notion_dbs` map, `jq` installed, the Integration shared with `triggers_db`, `requests_db`, and `projects_db`. If any script exits with code 2 (precondition failure), surface its stderr hint to the user and stop.
 
 ### 2. Parent Trigger specified
 
@@ -57,13 +53,18 @@ If none provided:
 
 > "분해할 Trigger를 알려주세요. Notion URL / 페이지 ID / 검색 키워드 중 하나로."
 
-### 3. Fixed DB IDs for this workspace
+## Scripts used
 
-- Triggers DB: `33fcd0143f6e80a5bb1fc67a1bd387ac`
-- Triggers data source: `33fcd014-3f6e-8092-a585-000b407693e7`
-- Requests DB: `33ecd0143f6e8037adcee2672e0abd0c`
-- Requests data source: `33ecd014-3f6e-80c0-b177-000b3e08ac88`
-- Projects DB: `b6ce9cb2184e47f0ba8c370b03dacf49`
+Shorthand used throughout this skill. Full signatures and behavior live in `notion-api/SKILL.md`.
+
+| Shorthand | Resolves to |
+|---|---|
+| `query-db.sh` | `${CLAUDE_PLUGIN_ROOT}/skills/notion-api/scripts/query-db.sh` |
+| `fetch-page.sh` | `${CLAUDE_PLUGIN_ROOT}/skills/notion-api/scripts/fetch-page.sh` |
+| `fetch-page-properties.sh` | `${CLAUDE_PLUGIN_ROOT}/skills/notion-api/scripts/fetch-page-properties.sh` |
+| `create-page.sh` | `${CLAUDE_PLUGIN_ROOT}/skills/notion-api/scripts/create-page.sh` |
+
+DB references use config keys: `requests_db`, `triggers_db`, `projects_db`. Raw UUIDs live only in `~/.datamktkorea/config.json` and the authoritative schema in `notion-api/SKILL.md`.
 
 ## Core Principles
 
@@ -98,7 +99,21 @@ Single approval gate per candidate (Accept / Edit / Reject / Skip) plus one fina
 
 ### 0.1 Resolve parent Trigger
 
-Use `mcp__notion__notion-fetch` on the supplied URL/ID. If user gave a keyword, `mcp__notion__notion-search` on the Triggers data source, show top 5, ask user to pick.
+If the user supplied a URL or page ID, fetch its properties and body:
+
+```bash
+fetch-page-properties.sh "<trigger-url-or-id>"
+fetch-page.sh "<trigger-url-or-id>" --markdown-only
+```
+
+If the user gave a keyword, search Triggers DB by title:
+
+```bash
+query-db.sh triggers_db --page-size 5 \
+  --filter "$(jq -n --arg k "<keyword>" '{property:"이름", title:{contains:$k}}')"
+```
+
+Show top 5 with title (`.properties["이름"].title[0].plain_text`) and Appetite (`.properties["허용 기간"].select.name`). Ask user to pick, then fetch properties + body for the selected one.
 
 ### 0.2 Parse required sections
 
@@ -118,21 +133,18 @@ and stop.
 
 ### 0.3 Load Project relation
 
-Fetch the Trigger's `프로젝트` relation value. Save for child Requests to inherit.
+Fetch the Trigger's `Projects DB` relation value (via `fetch-page-properties.sh` from 0.1). Save for child Requests to inherit.
 
 ### 0.4 Load existing children (re-decomposition case)
 
-Query Requests DB for rows with `트리거` relation pointing to this Trigger page:
+Query Requests DB with a server-side relation filter pointing at this Trigger:
 
-```
-mcp__notion__notion-search(
-  query = "",
-  data_source_url = "collection://33ecd014-3f6e-80c0-b177-000b3e08ac88",
-  page_size = 25
-)
+```bash
+query-db.sh requests_db --page-size 25 \
+  --filter "$(jq -n --arg tid "<parent-trigger-id>" '{property:"Triggers DB", relation:{contains:$tid}}')"
 ```
 
-Client-side filter by `트리거` relation = parent Trigger.
+No client-side filtering needed — the API returns only Requests whose `Triggers DB` relation contains the parent.
 
 If existing children found, surface:
 
@@ -389,35 +401,46 @@ If 3 rounds of review produce no accepted candidates:
 
 ### 4.2 Batch write
 
-Use `mcp__notion__notion-create-pages` with up to 100 pages in one call (fits our 2–10 range easily).
+The `notion-api` scripts create one page per invocation, so loop over the finalized candidates. Keep the full candidate JSON in memory — if a call fails, the remainder of the list must survive for retry.
 
+```bash
+created=()
+failed=()
+for cand_json in "${candidates[@]}"; do
+  title=$(jq -r .title     <<<"$cand_json")
+  type=$(jq -r .type        <<<"$cand_json")   # 기능 추가 | 기능 변경 | 기능 개선 | 기능 에러
+  priority=$(jq -r .priority <<<"$cand_json")
+  body=$(jq -r .body         <<<"$cand_json")
+
+  properties=$(jq -n \
+    --arg title "$title" --arg type "$type" --arg priority "$priority" \
+    --arg tid "<parent-trigger-id>" --arg pid "<project-id>" \
+    '{
+      "이름":        {"title":[{"text":{"content":$title}}]},
+      "유형":        {"select":{"name":$type}},
+      "카테고리":    {"select":{"name":"개발"}},
+      "우선순위":    {"select":{"name":$priority}},
+      "Triggers DB": {"relation":[{"id":$tid}]},
+      "Projects DB": {"relation":[{"id":$pid}]}
+    }')
+
+  if resp=$(create-page.sh --parent requests_db --properties "$properties" --markdown - <<<"$body" 2>/dev/null); then
+    created+=("$(jq -r '.url' <<<"$resp")")
+  else
+    failed+=("$title")
+  fi
+done
 ```
-parent: { type: "data_source_id", data_source_id: "33ecd014-3f6e-80c0-b177-000b3e08ac88" }
-pages: [
-  {
-    properties: {
-      "이름": "<sub-request title>",
-      "유형": "<기능 추가 | 기능 변경 | 기능 개선 | 기능 에러>",
-      "카테고리": "개발",
-      "우선순위": "<inherited or overridden>",
-      "트리거": "<parent trigger URL>",
-      "프로젝트": "<project URL inherited from Trigger>"
-    },
-    content: "<compiled 5-section markdown body>"
-  },
-  ...
-]
-```
 
-Do NOT set `상태` explicitly: defaults to "미할당" automatically when 담당자 is empty.
+Do NOT set `상태` explicitly: it defaults to "미할당" automatically when 담당자 is empty. The child-request relation key is `Triggers DB` (not `트리거`) per the `requests_db` schema in `notion-api/SKILL.md`.
 
-### 4.3 Atomic handling
+### 4.3 Partial-failure handling
 
-If any write fails:
+After the loop:
 
-- Collect successful page IDs.
-- Surface failure: "Created {M} of {N}. Failed: {list with errors}. 재시도할까요?"
-- Do NOT silently lose content. Keep draft in memory for retry.
+- If `failed` is empty → proceed to 4.4.
+- Otherwise surface: "Created **{#created}** of **{#created + #failed}**. Failed: **{failed titles}**. 재시도할까요?" and offer a retry loop limited to the failed candidates. The successful page IDs in `created` must not be recreated.
+- Do NOT silently lose content. Keep the original `candidates` array intact for retries.
 
 ### 4.4 Final report
 
@@ -544,7 +567,7 @@ The skill surfaces these verbatim when appropriate.
 
 ## Error Handling
 
-- **Notion MCP not connected** → stop at Prerequisites.
+- **notion-api precondition failed (exit 2)** → surface the script's stderr hint (missing config, jq, integration access) and stop.
 - **Trigger URL/ID invalid** → ask user to re-supply.
 - **Fat Marker Sketch empty** → stop at Phase 0.2, instruct to complete Trigger.
 - **AI proposes 0 candidates** → halt Phase 2, surface "분해 실패: Fat Marker Sketch에서 핵심 흐름을 찾을 수 없습니다. Trigger를 더 구체화해주세요."
