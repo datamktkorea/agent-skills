@@ -8,6 +8,8 @@ section_count: 8
 
 A bug is a deterministic failure. This template is retrospective ("something happened, fix it") and forces reproduction, localization, and regression-guard thinking. Modeled on SWE-bench task format, Kiro bugfix WHEN/THEN, Bettenburg 2008 hypothesis-carrying reports, and CTQRS quality dimensions.
 
+> **Note on examples.** All Good/Bad examples below are drawn from a single illustrative project (a book-publishing agent called BINGBONG: roles like `publisher`, features like TOC generation, file paths like `src/features/publisher/...`). They exist to show shape, not content. When running the skill, substitute actual identifiers from the user's Request, Projects DB, and `code.json`. Never reproduce these example identifiers in the user-facing prompt or the Spec body.
+
 **Grounding mandate:** Sections 3, 5, 6, 7, 8 MUST cite real file:line and real error messages from the Implementation Map. Generic language (e.g., "maybe a race condition") without evidence gets pushed back.
 
 ## Sections (in order)

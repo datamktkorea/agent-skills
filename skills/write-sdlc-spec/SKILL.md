@@ -29,15 +29,16 @@ All Notion access goes through the `notion-api` skill's bash scripts. Its precon
 
 ### 2. `~/.datamktkorea/code.json` exists
 
-Format:
+Format: JSON map from repo key (matching the name registered in the Projects DB) to its absolute local path.
 
 ```json
 {
-  "repo-name-in-projects-db": "/absolute/path/to/repo",
-  "dmk-bingbong-web": "/Users/vincent/WorkHard/dmk-bingbong-project/dmk-bingbong-web",
-  "dmk-bingbong-api": "/Users/vincent/WorkHard/dmk-bingbong-project/dmk-bingbong-api"
+  "<repo-key-1>": "/absolute/path/to/repo-1",
+  "<repo-key-2>": "/absolute/path/to/repo-2"
 }
 ```
+
+Repo key convention: `{엔티티 약어}-{프로젝트 약어}` or `{org}-{엔티티 약어}-{role}` (e.g., `-web`, `-api`). The exact keys are defined per-organization; read the actual file rather than assuming.
 
 Check existence:
 
@@ -76,6 +77,10 @@ Two pillars:
 1. **Every section has a forcing function**: sentence stem, good example, bad example, self-check. If the user writes vague content ("UX improvement", "bug fix"), push back with a specific probe. Do not advance until self-check passes.
 
 2. **Every concrete detail must be grounded in actual code**: file:line references, real function/constant names, real error messages. Writing a Spec before reading the code produces generic text the AI coding agent can't act on.
+
+### Note on examples
+
+Every concrete identifier in this skill's examples (repo names, file paths, component names, domain terms) is illustrative only. When running the skill, never copy example identifiers into the user-facing prompt or the Spec body — always substitute real values from `code.json`, the Projects DB, the Request body, and the files actually read. The examples exist to clarify shape, not content.
 
 ## Workflow Overview
 
@@ -179,14 +184,19 @@ Save the markdown as `{REQUEST_CONTEXT}`: this is the raw intake that the user w
 
 ### 1.1 Identify target repo
 
-From the Project's `엔티티 약어` + `프로젝트 약어`, construct the repo key. Example: Project `[BINGBONG] 부키(출판) 에이전트` has 엔티티=`bingbong`, 약어=`bookie`. Convention: try `{엔티티}-{약어}` → `bingbong-bookie`, then `dmk-{엔티티}-{role}` → `dmk-bingbong-web` / `dmk-bingbong-api`.
+From the Project's `엔티티 약어` + `프로젝트 약어`, construct candidate repo keys and look each up in `code.json`. Conventions to try, in order:
 
-Ask the user if multiple repos match:
+1. `{엔티티 약어}-{프로젝트 약어}` — single-repo projects
+2. `{org}-{엔티티 약어}-{role}` where `role` ∈ {`web`, `api`, `mobile`, `worker`, …} — multi-repo projects
+
+If nothing matches, fall back to fuzzy matching the 엔티티 약어 against `code.json` keys and ask the user to confirm.
+
+Ask the user if multiple repos match, listing whatever was actually resolved from `code.json` (no hardcoded names):
 
 > "이 프로젝트에 여러 레포가 연결됩니다:
 >
-> 1. dmk-bingbong-web (frontend)
-> 2. dmk-bingbong-api (backend)
+> 1. `{repo_key_1}` ({inferred_role})
+> 2. `{repo_key_2}` ({inferred_role})
 >    어느 레포에서 주로 작업하게 되나요? (복수 선택 가능)"
 
 Look up absolute paths in code.json. Verify each path exists:
@@ -332,7 +342,7 @@ For each section in the loaded template, in order:
 
 Compile the final body per the template's "final body format". Show the user a preview with:
 
-- Proposed title (generated from Request title + category, e.g., `[버그] TOC 로딩 스피너 멈춤: /agent/bookie 언마운트 후 재마운트`)
+- Proposed title (generated from Request title + category). Shape: `[{category prefix}] {one-line symptom or goal} : {specific user-visible context}`. Derive content from the Request body and Implementation Map, not from examples in this file.
 - All sections rendered
 - A "사용된 file:line 참조 {N}개" count (evidence of grounding)
 

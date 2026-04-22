@@ -10,6 +10,8 @@ A feature-add Spec is prospective ("something will exist"). It needs user-scenar
 
 **Grounding mandate:** Sections 5, 6, 7 MUST cite real file:line from the Implementation Map: especially the "similar pattern to follow" and "extension point".
 
+> **Note on examples.** All Good/Bad examples below are drawn from a single illustrative project (a book-publishing agent called BINGBONG: roles like `publisher`, features like TOC generation, file paths like `src/features/publisher/...`). They exist to show shape, not content. When running the skill, substitute actual identifiers from the user's Request, Projects DB, and `code.json`. Never reproduce these example identifiers in the user-facing prompt or the Spec body.
+
 ## Sections (in order)
 
 1. 한 줄 Spec (Spec Line)

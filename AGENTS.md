@@ -7,6 +7,24 @@ Create/Imporve/Modify skills in this repo.
 - Always use `/skill-creator` skill.
 - Always write skill content in English, but preserve the original language for proper nouns or domain-specific terms.
 
+### Keep skills generic — no project-specific identifiers in instructions
+
+Skills in this repo are reused across many projects. Concrete identifiers from one project (repo names like `dmk-bingbong-web`, file paths like `src/features/publisher/...`, people like `@김개발`, companies like `미소 병원`, features like `TOC 생성`) must NOT appear in any text the model will utter verbatim at runtime.
+
+**Two places they leak:**
+
+1. **User-facing prompts / asks.** Any string the skill tells the model to say to the user (e.g., `"어느 레포에서 작업하나요? 1. dmk-bingbong-web ..."`). Always use placeholders like `{repo_key}`, `{branch}`, `{role}` and populate at runtime from `code.json` / Projects DB / Request body. Never hardcode real names.
+2. **Explanatory prose ("Rationale", "Convention", example one-liners inside instructions).** Abstract to placeholders (`{repo}: {branch} @ {sha}`), not concrete names.
+
+**Where concrete examples ARE allowed:**
+
+- Good/Bad example blocks explicitly labeled as examples (sentence stems, worked illustrations). These teach shape by being concrete.
+- `code.json` schema samples — use `<repo-key-1>` / `/absolute/path/to/repo` style placeholders rather than a real org's repo names.
+
+**Mandatory disclaimer.** Any skill or template containing concrete example identifiers MUST carry a "Note on examples" block near the top stating that all identifiers in examples are illustrative and must be substituted with real values at runtime. This signals to the model that example strings are not a lookup table.
+
+**Self-check before committing a skill edit:** `grep -nE "bingbong|bookie|BINGBONG|미소|김영희|dmk-[a-z]+" skills/<skill>/**/*.md` — any hit outside a clearly-labeled example block is a bug.
+
 ## Notion API Usage
 
 Whenever writing or updating any skill that calls the Notion API, always fetch `https://developers.notion.com/llms.txt` first and use the latest endpoint URLs, version headers, and request formats found there. Never rely on memorized or previously seen Notion API details — they may be outdated.

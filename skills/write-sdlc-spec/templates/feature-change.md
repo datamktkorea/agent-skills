@@ -10,6 +10,8 @@ A feature-change is comparative (AS-IS vs TO-BE) with migration concerns. This i
 
 **Grounding mandate:** Sections 2, 3, 4, 5 MUST cite real code (file:line) and git history (commit hashes). Changing behavior without understanding why the current behavior exists is the #1 cause of regressions.
 
+> **Note on examples.** All Good/Bad examples below are drawn from a single illustrative project (a book-publishing agent called BINGBONG: roles like `publisher`, features like TOC generation, file paths like `src/features/publisher/...`). They exist to show shape, not content. When running the skill, substitute actual identifiers from the user's Request, Projects DB, and `code.json`. Never reproduce these example identifiers in the user-facing prompt or the Spec body.
+
 ## Sections (in order)
 
 1. 변경 한 줄 (Change Line)

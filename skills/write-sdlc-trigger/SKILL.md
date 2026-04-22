@@ -54,6 +54,10 @@ Each section therefore has:
 
 If the user writes something that fails self-check, **do not advance**. Push back with a specific probe ("실명 or 페르소나가 없네요. 이 사용자의 이름이나 역할을 구체적으로 쓸 수 있나요?").
 
+### Note on examples
+
+Every concrete identifier in this skill's Good/Bad examples (user names, company names, domain terms like "치과"·"미소 병원"·"김영희 실장", metrics, team members like "@김개발") is illustrative only — drawn from a single running example (dental-clinic chart automation) for clarity. When running the skill, never copy these identifiers into the user-facing prompt or the Trigger body. Substitute real values from the user's context.
+
 ## Workflow Overview
 
 | Phase                    | What happens                                                     |
