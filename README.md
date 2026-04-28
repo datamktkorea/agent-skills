@@ -44,8 +44,7 @@ brew install jq
 
 ### Task
 
-- **task-writer** — 로컬 마크다운 태스크 작성
-- **task-reviewer** — 태스크 리뷰 및 개선
+- **task-writer** — Notion Requests DB에 태스크 작성 (간결/보통/상세 티어 자동 판단, 검토 흡수)
 
 ### Git
 
