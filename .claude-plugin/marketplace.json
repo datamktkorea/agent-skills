@@ -8,7 +8,7 @@
     {
       "name": "datamktkorea",
       "source": "./",
-      "description": "데이터마케팅코리아 팀 워크플로 자동화 스킬 묶음 (SDLC, 회의록, 노션 API, 코드 리뷰)"
+      "description": "A collection of workflow automation skills for the DataMarketingKorea"
     }
   ]
 }
