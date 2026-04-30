@@ -14,12 +14,14 @@ This skill is the shared Notion API layer for the datamktkorea team. It wraps No
 Before using any script, make sure these are in place:
 
 1. **`~/.datamktkorea/config.json`** exists and contains:
+
    ```json
    {
      "notion_token": "ntn_...",
      "notion_dbs": { "requests_db": "<database_id>", ... }
    }
    ```
+
    Each team member keeps their own Integration token here. The file must never be committed.
 
 2. **`jq`** is installed (`brew install jq` on macOS).
@@ -32,11 +34,11 @@ If any precondition is missing, scripts exit with code `2` and a message explain
 
 All scripts honor these environment variables:
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `NOTION_TOKEN` | loaded from `config.json` | Override the integration token |
-| `NOTION_VERSION` | `2026-03-11` | Override the API version header (rarely needed) |
-| `NOTION_DEBUG` | unset | Set to `1` to log request URLs and retry attempts to stderr |
+| Variable         | Default                   | Purpose                                                     |
+| ---------------- | ------------------------- | ----------------------------------------------------------- |
+| `NOTION_TOKEN`   | loaded from `config.json` | Override the integration token                              |
+| `NOTION_VERSION` | `2026-03-11`              | Override the API version header (rarely needed)             |
+| `NOTION_DEBUG`   | unset                     | Set to `1` to log request URLs and retry attempts to stderr |
 
 ## Script contract
 
@@ -170,11 +172,11 @@ Note: `status` and `select` have different JSON shapes in Notion — consult the
 
 ## Error handling
 
-| Exit code | Meaning | Typical cause | Action |
-|---|---|---|---|
-| 0 | Success | — | — |
-| 1 | API error after retries | Bad request body, `object_not_found`, 5xx loop | Check the stderr message (`code` + `message` from Notion's error response) and fix the request |
-| 2 | Precondition failure | `jq` missing, `config.json` missing, `notion_token` empty | Follow the printed hint |
+| Exit code | Meaning                 | Typical cause                                             | Action                                                                                         |
+| --------- | ----------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 0         | Success                 | —                                                         | —                                                                                              |
+| 1         | API error after retries | Bad request body, `object_not_found`, 5xx loop            | Check the stderr message (`code` + `message` from Notion's error response) and fix the request |
+| 2         | Precondition failure    | `jq` missing, `config.json` missing, `notion_token` empty | Follow the printed hint                                                                        |
 
 When stderr shows `status: 401 unauthorized` → token is invalid or has been rotated; update `~/.datamktkorea/config.json`. When it shows `status: 404 object_not_found` with a `Make sure the relevant pages and databases are shared with your integration` hint → add the integration to that database in Notion. `429` is handled automatically but repeated hits mean you should reduce parallelism.
 
@@ -194,6 +196,7 @@ When stderr shows `status: 401 unauthorized` → token is invalid or has been ro
 Each entry lists the config key → title → `data_source_id`, then every property as `이름 [type]`.
 
 ### `projects_db` → Projects
+
 `data_source_id: d47fc205-0235-4dc6-b156-843e80a928e7`
 
 - 프로젝트명 [title]
@@ -211,6 +214,7 @@ Each entry lists the config key → title → `data_source_id`, then every prope
 - 최근 수정자 [last_edited_by]
 
 ### `requests_db` → Requests
+
 `data_source_id: 33ecd014-3f6e-80c0-b177-000b3e08ac88`
 
 - 이름 [title]
@@ -221,8 +225,8 @@ Each entry lists the config key → title → `data_source_id`, then every prope
 - 작업 기간 [date]
 - 요청자 [people]
 - 담당자 [people]
-- Triggers DB [relation]
-- Projects DB [relation]
+- Triggers DB [relation] → `triggers_db`
+- Projects DB [relation] → `projects_db`
 - 프로젝트 현황 [rollup]
 - 프로젝트 별칭 [rollup]
 - 생성 일시 [created_time]
@@ -231,24 +235,26 @@ Each entry lists the config key → title → `data_source_id`, then every prope
 - 최근 수정자 [last_edited_by]
 
 ### `memos_db` → Memos
+
 `data_source_id: f8b4207b-0330-4d9d-81cf-2604a1c71451`
 
 - 태스크명 [title]
 - 종류 [select]
 - 완료 여부 [checkbox]
 - 담당자 [people]
-- Requests [relation]
-- Projects [relation]
+- Requests [relation] → `requests_db`
+- Projects [relation] → `projects_db`
 - ID [unique_id]
-- 작업 소요일  (삭제 예정) [formula]
+- 작업 소요일 (삭제 예정) [formula]
 - 작업 시작일 (삭제 예정) [date]
-- 작업 완료일  (삭제 예정) [date]
+- 작업 완료일 (삭제 예정) [date]
 - 생성일자 [created_time]
 - 최신 수정일자 [last_edited_time]
 - 생성자 [created_by]
 - 최신 수정자 [last_edited_by]
 
 ### `triggers_db` → Triggers
+
 `data_source_id: 33fcd014-3f6e-8092-a585-000b407693e7`
 
 - 이름 [title]
@@ -261,23 +267,24 @@ Each entry lists the config key → title → `data_source_id`, then every prope
 - 담당자(숨김) [rollup]
 - 프로젝트명 [rollup]
 - 요청일시 [rollup]
-- Requests DB [relation]
-- Projects DB [relation]
-- 후속 트리거 [relation]
+- Requests DB [relation] → `requests_db`
+- Projects DB [relation] → `projects_db`
+- 후속 트리거 [relation] → `triggers_db`
 - 생성 일시 [created_time]
 - 최종 편집 일시 [last_edited_time]
 - 생성자 [created_by]
 - 최종 편집자 [last_edited_by]
 
 ### `specs_db` → Specs
+
 `data_source_id: 33fcd014-3f6e-80d9-9ad9-000b760cd632`
 
 - 이름 [title]
 - 담당자 [formula]
 - 우선순위 [rollup]
 - 유형 [rollup]
-- Requests DB [relation]
-- Projects DB [relation]
+- Requests DB [relation] → `requests_db`
+- Projects DB [relation] → `projects_db`
 - 생성 일시 [created_time]
 - 최종 편집 일시 [last_edited_time]
 - 생성자 [created_by]
