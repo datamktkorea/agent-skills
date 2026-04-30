@@ -1,14 +1,46 @@
 {
-  "name": "datamktkorea",
+  "name": "datamktkorea-agent-skills",
+  "description": "DataMarketingKorea AI agent skills",
   "owner": {
     "name": "datamktkorea",
     "email": "dmk@datamarketing.co.kr"
   },
   "plugins": [
     {
-      "name": "datamktkorea",
+      "name": "dmk-oneteam",
       "source": "./",
-      "description": "A collection of workflow automation skills for the DataMarketingKorea"
+      "strict": false,
+      "description": "Universal developer toolkit shared across every project",
+      "skills": [
+        "./skills/bootstrap",
+        "./skills/git-commit",
+        "./skills/git-pull-request",
+        "./skills/format-code-comments"
+      ]
+    },
+    {
+      "name": "dmk-sdlc",
+      "source": "./",
+      "strict": false,
+      "description": "Software development lifecycle and knowledge work automation",
+      "skills": [
+        "./skills/notion-api",
+        "./skills/task-writer",
+        "./skills/write-sdlc-spec",
+        "./skills/write-sdlc-trigger",
+        "./skills/decompose-sdlc-trigger",
+        "./skills/write-meeting-notes"
+      ]
+    },
+    {
+      "name": "dmk-stack",
+      "source": "./",
+      "strict": false,
+      "description": "Engineering playbooks and code review guides per technical stack",
+      "skills": [
+        "./skills/fastapi-best-practices",
+        "./skills/react-state-orchestration"
+      ]
     }
   ]
 }
