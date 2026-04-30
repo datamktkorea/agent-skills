@@ -282,3 +282,15 @@ Each entry lists the config key → title → `data_source_id`, then every prope
 - 최종 편집 일시 [last_edited_time]
 - 생성자 [created_by]
 - 최종 편집자 [last_edited_by]
+
+### `meetings_db` → Meeting
+
+`data_source_id: 47d70174-84ff-40e3-8782-e66e57953fe0`
+
+- Name [title]
+- Participants [people]
+- Projects [relation] → `projects_db`
+- 인수인계 [rich_text]
+- 회의일자 [date]
+
+> Note: property keys here are English (`Name`, `Participants`, `Projects`), unlike most other DBs in this registry — match the casing exactly when composing `--properties` payloads.
