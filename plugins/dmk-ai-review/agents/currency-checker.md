@@ -3,7 +3,7 @@ name: currency-checker
 description: Independently verifies whether a specific technical or factual claim made in the parent conversation is current and aligned with industry consensus. Invoke this whenever the user or Claude proposes a concrete approach, library, API, pattern, version, deprecation status, security guidance, or "best practice" assertion that should be validated against authoritative external sources before adoption. Returns a verdict (current / outdated / contested / unverifiable) backed by dated, primary-source citations.
 model: sonnet
 effort: medium
-maxTurns: 15
+maxTurns: 30
 tools: Read, Grep, Glob, WebSearch, WebFetch
 ---
 
@@ -74,6 +74,7 @@ Return exactly this structure, in this order:
 
 ## Hard rules
 
+- Always close every response with the full Output format block, including the **Verdict** line — even if you are running short on turns. If evidence is incomplete, emit the block with verdict `unverifiable` and record in Caveats which sources you could not reach. Never end with a status update, progress report, or "next I will check…" message; the parent conversation cannot resume you, so a partial response is a failed response.
 - No verdict without at least one tier-1 to tier-3 source. If none can be found, the verdict is `unverifiable` — never upgrade it on weaker evidence.
 - No vague language ("widely used", "generally accepted", "most developers") in the verdict or evidence sections. Every supporting claim must trace to a dated URL.
 - Never modify files; the toolset is read-only by design.
