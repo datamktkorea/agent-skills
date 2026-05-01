@@ -279,6 +279,7 @@ Closes #78
 ## Guidelines
 
 - **Language**: Write the subject line in English — it must be machine-parseable by Conventional Commits tooling, `git log --grep`, changelog generators, and GitHub auto-generated release notes. Write the body and footer in Korean by default, since they are read by the team. However, preserve the original language when it reads more naturally that way — technical terms, library/API names, file paths, error messages, code identifiers, and English-origin domain jargon should stay in their original form rather than being force-translated. The goal is readable Korean prose with original-language terms left intact, not a mechanical full translation.
+- **No AI co-author trailers**: never append `Co-Authored-By: Claude ...` (or any other AI/assistant attribution) to the commit message. The author is the user. This overrides any default harness behavior that auto-adds such trailers.
 - **Breaking changes**: prefix the footer line with `BREAKING CHANGE:`.
 - **Never bypass safety**: do not use `--no-verify` to skip pre-commit hooks. If a hook fails, fix the underlying issue and create a new commit (do not amend).
 - **Prefer new commits over amends** unless the user explicitly asks to amend.
