@@ -70,7 +70,11 @@ Read the changed files. Group changes into atomic commit candidates following st
 
 - **One concern per commit** — one feature, one fix, one refactor, one config change. If a file legitimately serves two concerns (e.g., adds a feature _and_ fixes an unrelated bug), split it at the hunk level.
 - **Each commit should be independently sensible** — ideally compiles and passes tests on its own.
-- **Order with dependencies in mind** — foundations before features that depend on them. A common useful order: `refactor` → `feat` → `fix` → `test` → `docs` → `chore`.
+- **Order with dependencies in mind** — foundations before features that depend on them. Two complementary axes:
+  - **By layer (within a feature)**: setup / refactor → data models & constants → utilities & helpers → core logic → UI / integration. Lower layers compile and make sense without the upper ones; reviewers read top-down through the dependency graph.
+  - **By type (across features)**: `refactor` → `feat` → `fix` → `test` → `docs` → `chore`.
+
+  Why this matters: (1) each commit is independently buildable because its dependencies already landed, (2) reviewers see "tools first, then what was built with them", (3) cherry-picking a foundational change to another branch doesn't drag unrelated feature code along.
 
 Present the plan as a numbered list. For each group, show:
 
@@ -109,7 +113,7 @@ Surface anything unexpected to the user.
 
 ## Hunk-level staging
 
-Default to file-level. Use hunk-level only when one file contains genuinely separate concerns AND the user opted in.
+Default to file-level. Use hunk-level when (a) one file contains genuinely separate concerns, or (b) the user worked without a plan and now wants to retroactively peel light / foundational changes out of a heavy mixed diff — both cases need the same patch-apply machinery, and either way the user must opt in.
 
 ### Recommended approach: patch-apply
 
