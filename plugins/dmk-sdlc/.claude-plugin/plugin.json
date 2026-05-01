@@ -2,5 +2,5 @@
   "name": "dmk-sdlc",
   "description": "Software development lifecycle and knowledge work automation",
   "version": "1.0.0",
-  "author": "datamktkorea"
+  "author": { "name": "datamktkorea", "email": "dmk@datamarketing.co.kr" }
 }

@@ -2,5 +2,5 @@
   "name": "dmk-oneteam",
   "description": "Universal developer toolkit shared across every project",
   "version": "1.0.0",
-  "author": "datamktkorea"
+  "author": { "name": "datamktkorea", "email": "dmk@datamarketing.co.kr" }
 }
