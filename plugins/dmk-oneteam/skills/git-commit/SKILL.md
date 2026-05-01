@@ -162,7 +162,7 @@ Run through this list against the drafted message before every `git commit`. If 
 5. **Separator** — exactly `: ` (colon + single space) between type/scope and subject.
 6. **Subject** — imperative present tense, lowercase first letter, no trailing period, ≤ 50 characters.
 7. **Blank line** between subject and body, and between body and footer (if either is present).
-8. **No hard-wrap in body** — each bullet or paragraph stays on a single line. Do not insert manual line breaks at 72 chars; let viewers reflow.
+8. **Body uses bullets** — if a body is present, every line of body content must start with `- ` (a hyphen and a space). No prose paragraphs, no numbered lists, no mixed formats. Each bullet stays on a single line — do not insert manual line breaks at 72 chars; let viewers reflow. Why bullets only: a fixed shape is scannable in `git log`, diff-friendly when commits are amended, and stops the body from drifting into long prose that restates the diff.
 9. **Breaking change** — if the change is breaking, append `!` to type (e.g., `feat!:` or `feat(api)!:`) AND include a `BREAKING CHANGE: ...` footer line.
 
 ### Common deviations to avoid
@@ -182,7 +182,7 @@ Run through this list against the drafted message before every `git commit`. If 
 - **Type (required)** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `revert`. See _Picking the type and gitmoji_ below.
 - **Scope (optional)** — affected module, e.g., `(auth)`, `(api)`, `(chat)`.
 - **Subject (required)** — the _what_ of the change. Imperative present tense ("add", not "added"), lowercase first letter, no trailing period, ≤ 50 characters.
-- **Body (optional)** — the _why_ behind the change, including how it differs from prior behavior. Don't restate what the diff already shows; readers can run `git show` for that. Write only what they couldn't infer from the code alone. **No hard line-wrapping** — let lines flow naturally. Modern web viewers (GitHub, GitLab) reflow text, and hard-wrapping bullets makes them look broken in rendered Markdown.
+- **Body (optional)** — the _why_ behind the change, including how it differs from prior behavior. Don't restate what the diff already shows; readers can run `git show` for that. Write only what they couldn't infer from the code alone. **Always formatted as `- ` bullets, one per line** — no prose paragraphs, no numbered lists. Each bullet is a single unwrapped line; modern web viewers (GitHub, GitLab) reflow text, and hard-wrapping makes bullets look broken in rendered Markdown. If a thought doesn't fit one bullet, split it into two bullets rather than wrapping or switching to prose.
 - **Footer (optional)** — issue references (`Closes #78`) or `BREAKING CHANGE:` notes.
 
 ### Picking the type and gitmoji
