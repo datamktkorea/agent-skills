@@ -8,39 +8,21 @@
   "plugins": [
     {
       "name": "dmk-oneteam",
-      "source": "./",
+      "source": "./plugins/dmk-oneteam",
       "strict": false,
-      "description": "Universal developer toolkit shared across every project",
-      "skills": [
-        "./skills/bootstrap",
-        "./skills/git-commit",
-        "./skills/git-pull-request",
-        "./skills/format-code-comments"
-      ]
+      "description": "Universal developer toolkit shared across every project"
     },
     {
       "name": "dmk-sdlc",
-      "source": "./",
+      "source": "./plugins/dmk-sdlc",
       "strict": false,
-      "description": "Software development lifecycle and knowledge work automation",
-      "skills": [
-        "./skills/notion-api",
-        "./skills/task-writer",
-        "./skills/write-sdlc-spec",
-        "./skills/write-sdlc-trigger",
-        "./skills/decompose-sdlc-trigger",
-        "./skills/write-meeting-notes"
-      ]
+      "description": "Software development lifecycle and knowledge work automation"
     },
     {
       "name": "dmk-stack",
-      "source": "./",
+      "source": "./plugins/dmk-stack",
       "strict": false,
-      "description": "Engineering playbooks and code review guides per technical stack",
-      "skills": [
-        "./skills/fastapi-best-practices",
-        "./skills/react-state-orchestration"
-      ]
+      "description": "Engineering playbooks and code review guides per technical stack"
     }
   ]
 }
