@@ -25,6 +25,64 @@ Skills in this repo are reused across many projects. Concrete identifiers from o
 
 **Self-check before committing a skill edit:** `grep -nE "bingbong|bookie|BINGBONG|미소|김영희|dmk-[a-z]+" skills/<skill>/**/*.md` — any hit outside a clearly-labeled example block is a bug.
 
+## Plugin Manifest Rules
+
+This repo distributes multiple plugins from a single repository via `.claude-plugin/marketplace.json`. Follow these rules to avoid broken namespacing.
+
+### Directory structure
+
+Each plugin **must live in its own subdirectory** with its own `.claude-plugin/plugin.json`:
+
+```
+plugins/
+├── dmk-oneteam/
+│   ├── .claude-plugin/
+│   │   └── plugin.json   ← plugin identity; name determines skill namespace
+│   └── skills/
+│       └── <skill-name>/SKILL.md
+├── dmk-sdlc/
+│   ├── .claude-plugin/
+│   │   └── plugin.json
+│   └── skills/
+└── dmk-stack/
+    ├── .claude-plugin/
+    │   └── plugin.json
+    └── skills/
+```
+
+### `plugin.json` schema
+
+```json
+{
+  "name": "dmk-oneteam",
+  "description": "...",
+  "version": "1.0.0",
+  "author": { "name": "...", "email": "..." }
+}
+```
+
+- `name` — determines the skill namespace prefix (e.g., `dmk-oneteam:bootstrap`)
+- `author` — **must be an object**, not a string. `{ "name": "...", "email": "..." }`
+
+### `marketplace.json` — each plugin must point to its own `source`
+
+```json
+{
+  "plugins": [
+    { "name": "dmk-oneteam", "source": "./plugins/dmk-oneteam" },
+    { "name": "dmk-sdlc",    "source": "./plugins/dmk-sdlc" },
+    { "name": "dmk-stack",   "source": "./plugins/dmk-stack" }
+  ]
+}
+```
+
+If multiple plugins share `"source": "./"`, Claude Code treats them as one source and collapses **all skills under whichever plugin name loads first**. Separate `source` paths are mandatory.
+
+### Adding a new skill
+
+1. Place `SKILL.md` under the correct plugin's `skills/` directory.
+2. No path registration needed — Claude Code auto-discovers `SKILL.md` files under each plugin's `source`.
+
 ## Notion API Usage
 
 Whenever writing or updating any skill that calls the Notion API, always fetch `https://developers.notion.com/llms.txt` first and use the latest endpoint URLs, version headers, and request formats found there. Never rely on memorized or previously seen Notion API details — they may be outdated.
