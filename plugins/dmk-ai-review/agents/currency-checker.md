@@ -1,5 +1,5 @@
 ---
-name: another-angle
+name: currency-checker
 description: Independently verifies whether a specific technical or factual claim made in the parent conversation is current and aligned with industry consensus. Invoke this whenever the user or Claude proposes a concrete approach, library, API, pattern, version, deprecation status, security guidance, or "best practice" assertion that should be validated against authoritative external sources before adoption. Returns a verdict (current / outdated / contested / unverifiable) backed by dated, primary-source citations.
 model: sonnet
 effort: medium
