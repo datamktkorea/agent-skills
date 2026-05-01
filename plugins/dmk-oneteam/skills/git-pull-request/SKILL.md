@@ -27,7 +27,7 @@ Do **not** trigger on plain "commit message" requests — that is `git-commit`'s
 
 ## Workflow
 
-The workflow has 8 steps. Steps 2, 4, and 7 are explicit user-confirmation gates. Do not skip them.
+The workflow has 9 steps. Steps 2, 3, 5, and 8 are explicit user-confirmation gates. Do not skip them.
 
 ### Step 1: Read repo state (read-only)
 
@@ -78,7 +78,64 @@ If the branch pattern is unmatched (the "Anything else" row), do **not** guess �
 
 Only after the user confirms — explicitly — proceed.
 
-### Step 3: Extract changes
+### Step 3: Rebase check (user-gated)
+
+Before extracting changes, check whether the branch is behind its parent on the remote. A stale branch produces a noisy PR diff (commits already on the parent show up as "changes"), and reviewers often ask for a rebase before approving anyway. Surfacing this _now_ — once, with consent — is cheaper than fixing it after review starts.
+
+This step is a **recommendation gate**, not an automatic action. The skill never rebases or force-pushes without explicit user confirmation, because both can destroy collaborators' work on a shared branch.
+
+#### 3a. Skip conditions
+
+Do **not** prompt for rebase when any of these are true:
+
+- The current branch is a major / long-lived branch: `main`, `master`, `develop`, `release/*`, or whatever the repo's default branch is (captured in Step 1). PRs from these are merge events between long-lived lines — rebasing them is the wrong tool and rewrites shared history.
+- The user explicitly told the skill earlier in the conversation not to rebase.
+- The remote parent ref cannot be fetched (offline, auth failure). Skip silently — do not block the workflow on a network problem.
+
+#### 3b. Detect behind count
+
+Refresh the remote parent ref and count how many commits the branch is behind. Both commands are read-only with respect to local history:
+
+- `git fetch origin <parent> --quiet`
+- `git rev-list --count HEAD..origin/<parent>` → call this `N`
+
+If `N == 0`, briefly tell the user the branch is up-to-date with `origin/<parent>` and continue to Step 4. No prompt needed.
+
+#### 3c. Surface and ask
+
+If `N > 0`, present the situation as a recommendation. The user owns the decision:
+
+> 현재 브랜치가 `origin/<parent>` 대비 **N개 커밋 뒤처져 있습니다**.
+> PR diff를 깔끔하게 보내기 위해 rebase를 권장합니다.
+>
+> ```
+> git fetch origin <parent>
+> git rebase origin/<parent>
+> ```
+>
+> 진행할까요?
+>
+> 1. **네, rebase 진행** — 충돌 없으면 자동으로 끝납니다.
+> 2. **아니요, 그대로 PR 작성** — 뒤처진 상태 그대로 진행합니다.
+
+#### 3d. If the user accepts
+
+Run `git rebase origin/<parent>`. Three outcomes:
+
+- **Clean rebase.** Continue to Step 4 and warn the user about force-push:
+  > rebase 완료. 이미 `origin`에 푸시된 브랜치라면 다시 푸시할 때 `git push --force-with-lease`가 필요합니다.
+  > (`--force-with-lease`는 동료가 그 사이 푸시한 커밋을 덮어쓰지 않도록 막아주는 안전장치입니다 — 일반 `--force` 대신 항상 이걸 쓰세요.)
+  > 이 브랜치를 동료와 함께 쓰고 있다면 force-push 전에 먼저 확인하세요.
+- **Conflicts.** Stop the skill. Do **not** try to resolve them — conflict resolution requires understanding the user's intent and is outside this skill's scope:
+  > rebase 도중 충돌이 발생했습니다. 충돌을 해결한 뒤 다시 PR 작성을 요청해 주세요.
+  > (충돌 파일 확인: `git status` / 중단하려면: `git rebase --abort`)
+- **Rebase aborts for other reasons** (dirty working tree, unstaged changes). Surface the error and ask the user to clean up first; do not retry automatically.
+
+#### 3e. If the user declines
+
+Continue to Step 4 against the existing branch state. Do not re-prompt later in the workflow.
+
+### Step 4: Extract changes
 
 Once the parent is locked in, gather the raw material:
 
@@ -86,11 +143,11 @@ Once the parent is locked in, gather the raw material:
 - `git log --format='%h%x09%s%x09%b%x1f' <parent>..HEAD` — full commit data (subject + body), tab-separated, record-separated
 - `git diff --name-status <parent>...HEAD` — files added / modified / deleted (note the **three dots** — diff against the merge base, which is what GitHub itself shows)
 - `git diff --stat <parent>...HEAD` — line counts per file
-- `git diff <parent>...HEAD` — the actual diff (used for Review Points and the format-code-comments check in Step 4)
+- `git diff <parent>...HEAD` — the actual diff (used for Review Points and the format-code-comments check in Step 5)
 
 If `<parent>..HEAD` is empty, the branch has no unique commits — stop and tell the user. There is nothing to PR.
 
-### Step 4: Comment-cleanup pass (sister-skill integration)
+### Step 5: Comment-cleanup pass (sister-skill integration)
 
 Before drafting the PR body, scan the diff for code-comment issues. The motivation: vibe-coded changes often leave behind English placeholder comments, stale TODOs, or `// TODO: explain later` markers that should not ship.
 
@@ -113,7 +170,7 @@ If any of these are present, surface a short suggestion **before** drafting the 
 
 If the user says yes, hand off to `format-code-comments` and resume here when they return. If no, continue. Do **not** auto-trigger the sibling skill — let the user decide.
 
-### Step 5: Categorize commits
+### Step 6: Categorize commits
 
 Map each commit to a PR section by parsing its `<gitmoji> <type>(<scope>): <subject>` shape. Use the table in [Gitmoji palette](#gitmoji-palette) below — it is intentionally aligned with the `git-commit` skill so a single commit message classifies cleanly here.
 
@@ -125,7 +182,7 @@ Two parsing rules:
 
 The PR body groups commits under section headers — the canonical six are: **Features**, **Fixes**, **Performance**, **Refactoring**, **Documentation**, **Chores**. Add **Tests** or **Style** sections only if commits exist for them. Empty sections must be omitted (see [Output rules](#output-rules)).
 
-### Step 6: Draft the PR body
+### Step 7: Draft the PR body
 
 Build the draft in this order:
 
@@ -139,7 +196,7 @@ Build the draft in this order:
    - **Checklist** — Korean labels. The agent auto-checks (`[x]`) items it actually performed; user-only verifications (e.g., 스크린샷 첨부, 수동 스테이징 검증) stay `[ ]`.
 4. **Omit empty sections entirely.** No `N/A`, no empty headers — see [Output rules](#output-rules).
 
-### Step 7: Show the draft and iterate
+### Step 8: Show the draft and iterate
 
 Print the full draft into the conversation (not into a file yet) and ask:
 
@@ -150,17 +207,17 @@ Print the full draft into the conversation (not into a file yet) and ask:
 
 Apply revisions inline. Re-print only the changed sections, not the whole draft, to keep the conversation readable. Loop until the user says it's good.
 
-### Step 8: Save and guide
+### Step 9: Save and guide
 
 Once approved, write the final body to a file and surface both deployment paths.
 
-#### 8a. Where to save
+#### 9a. Where to save
 
 - Default location: `PULL_REQUEST.md` in the repo root. Easy for the user to find, and `.gitignore`-able if the team prefers.
 - If the user prefers an out-of-tree location: `/tmp/PULL_REQUEST-<branch-slug>.md`. Doesn't pollute the working tree but is harder to refer back to.
 - If the user already has a file there: ask before overwriting.
 
-#### 8b. Tell the user how to use the file
+#### 9b. Tell the user how to use the file
 
 Always show **both** paths so teammates without `gh` CLI are not stuck:
 
@@ -389,5 +446,5 @@ The skill does **not** auto-pick a parent. It asks. Even if the user has only ev
 
 1. **Git repository required.** Skill aborts cleanly if `git rev-parse --git-dir` fails.
 2. **Network for `develop` check.** `git ls-remote` requires reaching origin. If offline, fall back to `git for-each-ref refs/remotes/origin/develop` (cached, may be stale) and warn the user.
-3. **Never silently rebase, force-push, or close existing PRs.** This skill writes a markdown file; it does not mutate git state or remote state.
+3. **Never rebase, force-push, or close existing PRs without explicit user confirmation.** Step 3 may run `git rebase` against the parent, but only after the user explicitly accepts the prompt. Force-push is _never_ executed by this skill — it is only suggested to the user with `--force-with-lease`. The skill never closes or mutates existing PRs.
 4. **Manual review still required.** Always advise the user to read the draft before submitting.
