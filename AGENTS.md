@@ -70,8 +70,8 @@ plugins/
 {
   "plugins": [
     { "name": "dmk-oneteam", "source": "./plugins/dmk-oneteam" },
-    { "name": "dmk-sdlc",    "source": "./plugins/dmk-sdlc" },
-    { "name": "dmk-stack",   "source": "./plugins/dmk-stack" }
+    { "name": "dmk-sdlc", "source": "./plugins/dmk-sdlc" },
+    { "name": "dmk-stack", "source": "./plugins/dmk-stack" }
   ]
 }
 ```
@@ -82,6 +82,40 @@ If multiple plugins share `"source": "./"`, Claude Code treats them as one sourc
 
 1. Place `SKILL.md` under the correct plugin's `skills/` directory.
 2. No path registration needed — Claude Code auto-discovers `SKILL.md` files under each plugin's `source`.
+
+## Plugin Versioning
+
+Each plugin carries its own `version` in `plugins/<plugin-name>/.claude-plugin/plugin.json`. This repo has no automated release tooling — bumps are manual and judged per change. The model surfaces the question; the user decides.
+
+### After every commit, judge whether to ask
+
+After completing a commit, evaluate the trigger conditions below. **Both must hold** to prompt:
+
+1. The commit touches files under `plugins/<plugin-name>/` (any plugin).
+2. The Conventional Commits type is one of: `feat`, `fix`, `perf`, `refactor`, or `docs`.
+
+`docs` is included on purpose: in this repo, skill content (`SKILL.md`) _is_ the behavior, so a docs change to a skill is user-visible. The plugin-directory filter scopes this correctly — repo-root docs (e.g., `AGENTS.md`, `README.md`) won't trigger.
+
+**Skip the prompt for:** `chore`, `test`, `style`, `ci` types; any commit that doesn't touch a plugin directory; or follow-up commits in a multi-commit change after the user has already decided to defer or apply a bump.
+
+### How to ask
+
+Ask once per affected plugin, immediately after the commit lands. Keep it binary; let the user pick the semver level:
+
+> 방금 커밋한 변경은 `<plugin-name>`의 사용자 동작을 바꿉니다. 버전 bump가 필요할까요? (Y/N)
+> Y면 patch / minor / major 중 어디에 해당하는지 알려주세요.
+
+If multiple plugins were touched in one commit, ask separately per plugin so each version stream stays independent.
+
+### Semver rubric (for the user's reference, not auto-applied)
+
+- **patch** — bug fixes, typo/doc fixes, internal refactors that don't change skill behavior.
+- **minor** — new skills, new features in existing skills, materially expanded behavior.
+- **major** — breaking changes to a skill's interface, removed skills, incompatible config-schema changes.
+
+### After approval
+
+If the user approves a bump, edit `plugins/<plugin-name>/.claude-plugin/plugin.json` `version`, then create a separate commit using the `git-commit` skill with the `🔖 chore(release): bump <plugin-name> to <new-version>` shape.
 
 ## Notion API Usage
 
