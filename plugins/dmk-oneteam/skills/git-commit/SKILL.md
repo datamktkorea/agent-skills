@@ -157,7 +157,7 @@ Run through this list against the drafted message before every `git commit`. If 
 
 1. **Gitmoji** — message starts with exactly one gitmoji from the palette (primary table or specialized palette). Not a random emoji, not the `:code:` form, not two emojis.
 2. **Single space** between gitmoji and type.
-3. **Type** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `release`, `revert`. No custom types.
+3. **Type** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `revert`. No custom types.
 4. **Scope** — if present, directly attached: `type(scope)` with no space before `(`. If absent, no empty `()`.
 5. **Separator** — exactly `: ` (colon + single space) between type/scope and subject.
 6. **Subject** — imperative present tense, lowercase first letter, no trailing period, ≤ 50 characters.
@@ -179,7 +179,7 @@ Run through this list against the drafted message before every `git commit`. If 
 ### Components
 
 - **Gitmoji (required)** — visual cue for the change category. See _Picking the type and gitmoji_ below.
-- **Type (required)** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `release`, `revert`. See _Picking the type and gitmoji_ below.
+- **Type (required)** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `revert`. See _Picking the type and gitmoji_ below.
 - **Scope (optional)** — affected module, e.g., `(auth)`, `(api)`, `(chat)`.
 - **Subject (required)** — the _what_ of the change. Imperative present tense ("add", not "added"), lowercase first letter, no trailing period, ≤ 50 characters.
 - **Body (optional)** — the _why_ behind the change, including how it differs from prior behavior. Don't restate what the diff already shows; readers can run `git show` for that. Write only what they couldn't infer from the code alone. **No hard line-wrapping** — let lines flow naturally. Modern web viewers (GitHub, GitLab) reflow text, and hard-wrapping bullets makes them look broken in rendered Markdown.
@@ -191,7 +191,7 @@ The `<type>` always comes from the primary table below. The gitmoji defaults to 
 
 #### Primary type table
 
-Use this table to pick the `<type>` and its **default** gitmoji. One of these ten covers almost every commit.
+Use this table to pick the `<type>` and its **default** gitmoji. One of these nine covers almost every commit.
 
 | Gitmoji |         Code         | Type       | Description                            |
 | :-----: | :------------------: | :--------- | :------------------------------------- |
@@ -203,8 +203,9 @@ Use this table to pick the `<type>` and its **default** gitmoji. One of these te
 |   ✅    | `:white_check_mark:` | `test`     | Add, update, or pass tests             |
 |   🔧    |      `:wrench:`      | `chore`    | Update config / tooling / deps         |
 |   ⚡️    |       `:zap:`        | `perf`     | Improve performance                    |
-|   🔖    |     `:bookmark:`     | `release`  | Release / version tag                  |
 |   ⏪️    |      `:rewind:`      | `revert`   | Revert a previous commit               |
+
+Note: there is no `release` type. Version-bump commits use `chore(release):` with the 🔖 gitmoji — see the `chore` specialized palette below.
 
 #### Specialized gitmoji palette
 
@@ -240,6 +241,7 @@ The gitmoji can carry information beyond the type. When one of these fits the ch
 |   ➖    | `:heavy_minus_sign:`    | Remove a dependency           |
 |   👷    | `:construction_worker:` | Add or update CI build system |
 |   🙈    | `:see_no_evil:`         | Add or update `.gitignore`    |
+|   🔖    | `:bookmark:`            | Release / version bump (use scope `release`, e.g., `🔖 chore(release): bump dmk-oneteam to 1.0.1`) — matches semantic-release / release-please output |
 
 **Within `style`:** 💄 (`:lipstick:`) — add or update UI / style files.
 
