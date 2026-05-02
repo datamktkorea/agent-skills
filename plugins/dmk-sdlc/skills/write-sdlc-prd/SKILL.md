@@ -1,5 +1,5 @@
 ---
-name: write-prd
+name: write-sdlc-prd
 description: Writes a Product Requirements Document (PRD) section-by-section through interactive Q&A, designed to surface decisions that get expensive when discovered late (pricing, multi-tenancy, i18n, audit, permissions). Trigger whenever the user mentions PRD, 기획서, 요구사항 문서, 제품 기획, 프로덕트 스펙 — and also when they describe wanting to plan out a new product or feature in writing, even without naming the artifact. Use for any feature serious enough to warrant a written spec, not for one-line memos.
 ---
 
