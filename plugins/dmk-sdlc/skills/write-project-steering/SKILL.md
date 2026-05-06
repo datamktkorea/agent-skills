@@ -1,351 +1,345 @@
 ---
 name: write-project-steering
-description: Writes a Product Requirements Document (PRD) section-by-section through interactive Q&A, designed to surface decisions that get expensive when discovered late (pricing, multi-tenancy, i18n, audit, permissions). Trigger whenever the user mentions PRD, 기획서, 요구사항 문서, 제품 기획, 프로덕트 스펙 — and also when they describe wanting to plan out a new product or feature in writing, even without naming the artifact. Use for any feature serious enough to warrant a written spec, not for one-line memos.
+description: Authors a project's internal Single Source of Truth (SSOT) by walking the user through a section-by-section interview, then writes the result into the corresponding Project DB page body in Notion. The skill auto-detects the project type (product / contract / public) from the Project DB `type` Select property and loads the matching section template. Trigger when the user mentions Project Steering, 프로덕트 헌장/스티어링, Statement of Work, SOW, RFP Response, RFP 응답, 제안서, 사업 수행 계획서, 도메인 용어집, 유비쿼터스 언어, 비즈니스 규칙 정리, 멀티테넌시·i18n·권한 모델 결정, monetization gating rules — and also when they describe wanting to lock down time-invariant product knowledge that AI coding sessions will fetch.
 ---
 
-# Write PRD
+# Write Project Steering
 
-Author a Product Requirements Document by walking the user through a 9-section template, one section at a time. The skill's primary job is to *surface decisions that are cheap to make now and expensive to discover later* — pricing model, multi-tenancy, i18n boundaries, audit requirements, permission edges. The PRD itself is a side effect; the conversation is the deliverable.
+Authors the **internal Single Source of Truth (SSOT)** for a project, written directly into the project's page body in the Notion Projects DB. The skill is the producer side of the SSOT contract: every Phase-2 coding session fetches this body verbatim as authoritative context, so the document must contain only *time-invariant, decision-grade* knowledge — not roadmap, not metrics, not active risks.
+
+The forcing function is the per-section interview. The conversation surfaces decisions that are cheap now and expensive to retrofit (multi-tenancy, i18n, permissions, monetization gating). The document is the side effect; the conversation is the deliverable.
+
+## What this skill is, and what it is not
+
+| Layer | Time-bound? | Where it lives | Skill |
+|---|---|---|---|
+| Project Steering / SOW / RFP Response | **No — invariants only** | Project DB page body | **this skill** |
+| Initiative (2–6 week bet) | Yes — bet horizon | Initiatives DB | `write-sdlc-initiative` |
+| Spec (executable unit) | Yes — sprint horizon | Specs DB | `write-sdlc-spec` |
+| Active risks, open decisions, success metrics, milestones | Yes | Initiative body | `write-sdlc-initiative` |
+
+**Hard rule.** Any sentence with a date, a metric target, an open question, or "TBD" does not belong in this document. If the user wants to capture those, redirect them to `write-sdlc-initiative`.
 
 ## When to use
 
-- User starts planning a new product, feature, or service and the artifact is intended to be substantive (not a one-line idea).
-- User says "PRD 만들어줘", "기획서 정리", "요구사항 문서", "제품 기획", "프로덕트 스펙 작성", or describes wanting a written specification.
-- User wants to *re-author* an existing PRD section by section (revision flow).
-- User has interview notes, meeting transcripts, or pitch decks and wants them turned into a structured PRD.
+- Standing up a new project's SSOT for the first time.
+- Re-authoring an existing Project Steering / SOW / RFP Response page section by section (revision flow).
+- Converting interview notes, kickoff transcripts, or pitch/RFP materials into a structured SSOT.
+- User mentions: Project Steering, 프로덕트 헌장, SOW, Statement of Work, 제안서, 사업 수행 계획서, RFP 응답, 도메인 용어집, 비즈니스 규칙, 멀티테넌시 결정, i18n 결정, 권한 모델, 가격 게이팅 규칙.
 
 ## When NOT to use
 
-- One-line memos or simple feature requests → use a Request artifact instead.
-- Spec-level work (the executable spec handed to a coding agent) → use **write-sdlc-spec**.
-- Initiative-level bets (multi-week strategic) → use **write-sdlc-initiative**.
+- One-line task or feature request → `capture-request`.
+- 2–6 week bet with success metrics → `write-sdlc-initiative`.
+- Executable spec for a coding agent → `write-sdlc-spec`.
+- Customer-facing deliverable that lives outside Notion as a final external artifact (e.g., signed PDF SOW) → out of scope; the Notion-side SSOT may inform that artifact, but rendering and delivery are not this skill's job.
 
 ## Note on examples
 
-Every concrete identifier in this skill's references and examples (domain names, product names, feature names, role names) is illustrative only. When running the skill, never copy example identifiers into the user-facing prompt or the PRD body — always substitute real values from the user's project context. The examples in `PRD_TEMPLATE.md` exist to clarify shape, not content.
+Every concrete identifier in this skill's text and in the reference templates (domain names, product names, role names, regulator names, agency names) is illustrative. When running the skill, never copy example identifiers into the user-facing prompt or the document body — substitute real values from the project's context.
 
 ## Reference resources
 
 | Path | Purpose |
 |---|---|
-| `${CLAUDE_PLUGIN_ROOT}/skills/write-prd/references/PRD_TEMPLATE.md` | Canonical 9-section template; copied as the working file at start |
-
-## Expensive-late decision categories (default surface targets)
-
-The skill's primary value is *forcing function* for decisions that are cheap to make in writing and expensive to retrofit in code. The 빼먹기 쉬운 결정 점검 blocks embedded in `PRD_TEMPLATE.md` cover section-specific items, but the skill should also actively surface these category clusters across sections, even when the template doesn't explicitly prompt them.
-
-**Tier 1 — Universal (B2B SaaS core)**
-
-| Category | Why it gets expensive late |
-|---|---|
-| Pricing model | Migrating billing logic post-launch breaks revenue continuity and existing contracts |
-| Multi-tenancy / data isolation | Retrofitting tenant boundaries requires data backfill and an access-control rewrite |
-| Internationalization (system / admin / user content) | i18n added later forces schema changes for every translatable column |
-| Audit and logging | Regulatory or forensic gaps cannot be filled retroactively for past events |
-| Permissions and role boundaries | Permission-model changes ripple through every authorization check in the code |
-
-**Tier 2 — Domain-specific (raise when the user's domain matches)**
-
-| Category | Surface when |
-|---|---|
-| Scalability ceilings (load profile, hot-path performance) | Public-facing product, expected traffic spike, or concurrency-sensitive workflow |
-| Data residency and retention | Healthcare, finance, EU/regulated jurisdictions, or PII-heavy product |
-| Accessibility (WCAG 2.x) | Public-sector, education, or any product with statutory accessibility obligations |
-| Security and encryption (PII / threat model) | Handling sensitive data, payment, identity, or attack-surface-relevant features |
-
-When Section 0.1 source materials or initial Q&A reveals the user's domain, raise the relevant Tier 2 categories to first-class status alongside Tier 1. If the user's product genuinely doesn't match Tier 1 (e.g., a single-tenant internal tool with no external-facing pricing surface), demote those items to "confirm not applicable" rather than silently dropping them.
-
-Do not dilute Tier 1 by mixing in Tier 2 items the user's domain doesn't match. The forcing function works only when each category is plausibly relevant to the product at hand.
+| `${CLAUDE_PLUGIN_ROOT}/skills/write-project-steering/references/product.md` | Section template for `type=product` (자사 SaaS / 제품) — output: *Project Steering* |
+| `${CLAUDE_PLUGIN_ROOT}/skills/write-project-steering/references/contract.md` | Section template for `type=contract` (수탁) — output: *Statement of Work (SOW)* |
+| `${CLAUDE_PLUGIN_ROOT}/skills/write-project-steering/references/public.md` | Section template for `type=public` (공공) — output: *RFP Response* |
+| `${CLAUDE_PLUGIN_ROOT}/skills/write-project-steering/references/legacy/PRD_TEMPLATE.md` | Pre-A-alignment 9-section external PRD template; retained for the future external-PRD track (not used by this skill) |
 
 ## Workflow Overview
 
 | Phase | What happens |
 |---|---|
-| 0. Setup | Resolve source materials, name the file, copy the template |
-| 1. Section authoring loop | Walk through 9 sections in recommended order; per-section cycle (draft → critique → revise → confirm) |
-| 2. Anchor verification | Verify cross-section consistency anchors as they are written, not at the end |
-| 3. Final pass | Consolidate `[미결정] / [가정] / [검증필요]` markers; run 섹션 9.5 checklist; finalize 섹션 1 metadata; decide guide-text disposition |
+| 0. Setup | Resolve the target Project DB page, detect branch, load source materials, load the matching section template |
+| 1. Section authoring loop | Walk through the loaded sections in the recommended order; per-section cycle (draft → critique → revise → confirm) |
+| 2. Cross-section consistency | As each section lands, verify domain/glossary/business-rule anchors against earlier sections |
+| 3. Final pass | Push resolved invariants into the Project DB page body; route any open decisions or active risks out of Steering and into the appropriate Initiative |
 
 ---
 
 ## Phase 0: Setup
 
-### 0.1 Source materials (entry mode)
+### 0.1 Resolve the target Project DB page
 
 Open with this question:
 
-> "PRD 작성에 참고할 자료(인터뷰, 회의록, 발표 PPT, 기존 기획 메모 등)가 있으신가요?
-> - 있다면: 파일 경로, 인라인 페이스트, URL, Notion 페이지 URL — 어떤 형태든 던져주세요.
-> - 없다면: '없음'이라고 알려주세요. 0부터 함께 만들어 가겠습니다."
+> "어느 Project의 Steering 문서를 작성/갱신할까요? Project DB의 페이지 URL이나 제목을 알려주세요."
 
-Resolve materials by type:
+Resolve:
 
-- **File path** (`.md`, `.txt`, `.pdf`, `.docx`, …) → Read.
-- **Inline paste** → use as-is.
-- **Web URL** → WebFetch.
-- **Notion page URL/ID** → use the `notion-api` skill's `fetch-page.sh ... --markdown-only`.
-- **Audio/video file** → respond: "오디오/영상 파일은 직접 읽을 수 없어요. 텍스트로 변환된 자료를 주시면 사용하겠습니다."
+- **Notion page URL or ID** → use the `notion-api` skill: fetch the page (markdown body) and read its properties for the `type` Select.
+- **Title only** → search the Projects DB by title via `notion-api`.
+- **None / new project** → ask whether the user will create a new Project DB page first, or whether to abort and return after creation. Do not auto-create.
 
-Save the consolidated source as `{SOURCE_CONTEXT}` for the rest of the session. If multiple files are provided, concatenate with clear separators (`--- {filename} ---`).
+Save:
+- `{PROJECT_PAGE_ID}` — Notion page ID
+- `{PROJECT_TITLE}` — page title
+- `{EXISTING_BODY}` — current page body as markdown (may be empty)
+- `{PROJECT_TYPE_RAW}` — value of the `type` Select property (may be unset)
 
-If the user says '없음' → set `{SOURCE_CONTEXT} = ""` and continue. The two branches differ only in Phase 1.2.
+### 0.2 Detect branch (project type)
 
-### 0.2 Name the working file
+Branch logic:
+
+1. If `{PROJECT_TYPE_RAW}` is one of `product`, `contract`, `public` → set `{BRANCH} = {PROJECT_TYPE_RAW}`.
+2. Otherwise (unset / unrecognized) → ask the user:
+
+   > "이 프로젝트는 어느 분기인가요?
+   > (a) **product** — 자사 SaaS·내부 제품. 산출물 명: *Project Steering*
+   > (b) **contract** — 수탁·고객 발주. 산출물 명: *Statement of Work (SOW)*
+   > (c) **public** — 공공·RFP 대응. 산출물 명: *RFP Response*"
+
+   Capture as `{BRANCH}`. Do NOT write back to the Notion `type` property automatically — tell the user to set it themselves so the next session auto-detects:
+
+   > "다음 세션을 위해 Project DB의 `type` Select 속성을 `{BRANCH}`로 설정해 두시면 자동 감지됩니다."
+
+3. Load the matching template:
+
+   ```
+   {TEMPLATE_PATH} = ${CLAUDE_PLUGIN_ROOT}/skills/write-project-steering/references/{BRANCH}.md
+   ```
+
+   Read `{TEMPLATE_PATH}` once. It contains the full section list, per-section *결정에 필요한 입력* question packs, *빼먹기 쉬운 결정 점검* blocks, and the recommended section order for that branch. Do NOT paste the template wholesale into chat — surface one section at a time.
+
+Announce:
+
+> "분기: `{BRANCH}` → 산출물 명칭: `{Project Steering | Statement of Work (SOW) | RFP Response}`. 이 명칭을 본문 1행 헤더로 사용합니다."
+
+### 0.3 Source materials
 
 Ask:
 
-> "이번 PRD의 제품/기능 이름을 알려주세요. 파일명에 사용할 거예요. (예: `Project Atlas`, `결제 모듈 v2`)"
+> "작성에 참고할 자료(인터뷰, 회의록, 발표 PPT, 기존 메모, RFP 본문 등)가 있으신가요?
+> - 있다면: 파일 경로, 인라인 페이스트, URL, Notion 페이지 URL — 어떤 형태든 알려주세요.
+> - 없다면: '없음'이라고 알려주세요. 0부터 함께 만듭니다."
 
-Slugify minimally — preserve Korean, replace whitespace with hyphens, strip filesystem-forbidden chars (`/ \ : * ? " < > |`). Then check existence:
+Resolve by type:
 
-```bash
-test -f "./{slug}.md" && echo "EXISTS" || echo "OK"
-```
+- **File path** (`.md`, `.txt`, `.pdf`, `.docx`) → Read.
+- **Inline paste** → use as-is.
+- **Web URL** → WebFetch.
+- **Notion page URL/ID** → `notion-api` fetch with markdown-only output.
+- **Audio/video** → respond: "오디오/영상은 직접 읽을 수 없어요. 텍스트로 변환된 자료를 주세요."
 
-If `OK`:
+Concatenate into `{SOURCE_CONTEXT}` with `--- {filename or url} ---` separators. If '없음' → `{SOURCE_CONTEXT} = ""`.
 
-```bash
-cp "${CLAUDE_PLUGIN_ROOT}/skills/write-prd/reference/PRD_TEMPLATE.md" "./{slug}.md"
-```
+### 0.4 Existing body disposition
 
-If `EXISTS`, ask:
+If `{EXISTING_BODY}` is non-empty, ask:
 
-> "이미 `./{slug}.md` 파일이 있어요. 어떻게 할까요?
-> (a) 덮어쓴다 — 기존 내용 사라집니다
-> (b) 다른 이름으로 — 새 이름 알려주세요
-> (c) 이어서 작성한다 — 기존 파일을 그대로 두고 비어있는 섹션부터 채워나갑니다"
+> "이 페이지에 이미 본문이 약 {N}자 있습니다. 어떻게 할까요?
+> (a) 처음부터 다시 — 기존 본문은 백업한 뒤 폐기
+> (b) 비어있는 섹션부터 이어서 — 기존 섹션은 검토 후 통과 처리
+> (c) 섹션별로 점검하며 갱신 — 한 섹션씩 기존 내용을 보고 결정"
 
-Confirm to user:
+If (a) → save `{EXISTING_BODY}` to `./.steering-backup-{YYYYMMDD-HHMM}.md` before clearing.
 
-> "`./{slug}.md` 파일을 준비했어요. 이 파일을 섹션 단위로 함께 채워나갑니다."
+### 0.5 Announce the section order
 
-Save the working path as `{PRD_FILE}`.
+Read the recommended ordering from `{TEMPLATE_PATH}`. Announce:
 
-### 0.3 Announce the recommended order
-
-> "권장 작성 순서는 다음과 같습니다:
-> **2 (배경/문제) → 3 (목표/지표) → 4 (사용자) → 6 (시나리오) → 5 (UC) → 7 (IA/화면) → 8 (Epic/Feature) → 9 (범위/일정) → 1 (메타데이터)**
+> "분기 `{BRANCH}`의 권장 작성 순서:
+> {ordered list from template}
 >
-> 문제 정의 → 측정 가능한 목표 → 사용자·시나리오 → 구현 스펙 순. 섹션 3 목표를 섹션 8 Epic 이전에 두어 *피처에서 목표를 역도출하는* feature-factory 위험을 구조적으로 제거하고, 섹션 2 문제 정의가 섹션 3 목표 이전에 와서 *문제 없는 목표* 함정도 피합니다.
->
-> 시작할까요? (default: 섹션 2부터)"
+> 이 순서는 *어느 결정이 어느 결정에 의존하는지*를 인코딩합니다. 다른 순서를 원하시면 알려주세요. 시작할까요? (default: 첫 섹션부터)"
 
-If the user requests a *different* custom order → follow, but flag any anchor risks per Phase 2 *before* starting each section. **If the custom order places Section 3 after Section 8** → activate the goal-laundering guard in Phase 2.4.
+If the user requests a custom order, accept but flag any anchor risks per Phase 2 *before* starting each section.
 
 ---
 
 ## Phase 1: Section Authoring Loop
 
-For each section in order, run this cycle. Do NOT advance until the confirmation phrase is received.
+For each section in agreed order, run this cycle. Do NOT advance until confirmation.
 
 ### 1.1 Open the section
 
-- Open `{PRD_FILE}` and locate the target section's heading.
-- Read the section's existing template content (intro, guide text, 빼먹기 쉬운 결정 점검 block, placeholders).
-- Announce: "지금부터 **섹션 X — {section title}**을 작성합니다."
+- Locate the section in `{TEMPLATE_PATH}` and read its scaffold (heading, intro, *결정에 필요한 입력* questions, *빼먹기 쉬운 결정 점검* block).
+- Announce: "지금부터 **{section title}**을 작성합니다."
 
 ### 1.2 Draft (or question pack)
 
 Branch on `{SOURCE_CONTEXT}`:
 
-**If source material exists** → Extract the section-relevant content from `{SOURCE_CONTEXT}`. Produce a draft for the section's placeholders. Where the source is silent on a required field, insert a marker (`[미결정: …]` or `[가정: … / 검증자 / 시한]`) — never invent.
+**Source exists** → extract section-relevant content. Produce a draft for the section's placeholders. Where the source is silent on a required field → mark `[가정: <statement> / 검증자 / 시한]`. **Never use `[미결정: ...]` markers in this skill** — Steering does not host open decisions; if a decision is unmade, route to Initiative instead (see Phase 1.5 and Phase 3.1).
 
-**If no source material** → Ask the user the section's core questions as a focused pack of 3–5 questions max (the template already enumerates these as *결정에 필요한 입력*). Capture answers, then produce the draft.
+**No source** → ask the section's *결정에 필요한 입력* as a focused pack of 3–5 questions max. Capture answers, then draft.
 
-Show the draft to the user inline (in the chat), not yet written to file.
+Show the draft inline (chat), not yet pushed to Notion.
 
 ### 1.3 Critique (free-form)
 
-Ask:
-
 > "이 초안을 검토해 주세요. 자유롭게 비판/보강 의견을 주시면 됩니다."
 
-Wait for the user's free-form critique. They may reject specific lines, demand rewrites, add new sub-points, or catch domain-specific wrongness. Do not impose a structured rubric — let them speak in their own terms.
+Wait for free-form critique. Do not impose a structured rubric.
 
 ### 1.4 Revise
 
-Apply the critique. Show the revised draft. Loop back to 1.3 until the user confirms.
+Apply the critique. Show the revised draft. Loop 1.3 until the user confirms.
 
 ### 1.5 Section-end "빼먹기 쉬운 결정" check
 
-Before requesting confirmation, walk the user through this section's *빼먹기 쉬운 결정 점검* block (already embedded in the template — for 섹션 2 it's 섹션 2.4, for 섹션 3 it's 섹션 3.5, etc.). For each item:
+Walk the user through this section's *빼먹기 쉬운 결정 점검* block from `{TEMPLATE_PATH}`. For each item:
 
-- If the draft already covers it → mark as 통과.
-- If not covered but answerable now → ask the user, fill in.
-- If not answerable now → insert a marker (`[미결정: 결정자 / 시한]` or `[가정: … / 검증자 / 시한]`).
+- Already covered → 통과.
+- Answerable now → ask, fill in.
+- Not answerable now → **do NOT add a `[미결정]` to Steering.** Surface to user:
+
+  > "'{item}'은 아직 결정되지 않았네요. 이건 Steering이 아닌 Initiative에서 다뤄야 합니다. 어느 Initiative로 보낼지 알려주세요. (적합한 Initiative가 아직 없으면 'later'라고 답해주세요. 본 세션 종료 시 한 번에 정리합니다.)"
+
+  Capture as `{PENDING_DECISIONS} += {item, target_initiative_or_later}`.
 
 Surface a short summary:
 
-> "섹션 X의 빼먹기 점검 결과:
+> "{section} 빼먹기 점검 결과:
 > - 통과: {N}건
-> - 마커로 보존: {M}건 ({한 줄 요약})"
+> - Initiative로 라우팅: {M}건"
 
 ### 1.6 Confirmation
 
-Ask:
+> "{section}을 이 내용으로 확정할까요? '확정' 또는 '승인'이면 다음 섹션으로 넘어갑니다."
 
-> "섹션 X를 이 내용으로 확정할까요? '확정' 또는 '승인'이라고 말씀해 주시면 파일에 반영하고 다음 섹션으로 넘어갑니다."
-
-Confirmation phrases recognized: `"확정"`, `"승인"`. Anything else → continue at 1.3 with the user's input as new critique.
+Confirmation phrases recognized: `"확정"`, `"승인"`. Anything else → continue at 1.3.
 
 On confirmation:
-- Write the section content into `{PRD_FILE}` via Edit (replace placeholders, preserve guide text and 점검 block — those will be revisited in Phase 3).
-- Announce: "섹션 X 확정했어요. 다음은 섹션 Y."
-- Move to the next section in the agreed order.
+- Append the section content to a session-local working buffer `{WORKING_BODY}`. **Do not push to Notion section-by-section** — push once at Phase 3.4 to avoid header fragmentation.
+- Announce: "{section} 확정. 다음은 {next section}."
 
 ---
 
-## Phase 2: Cross-Section Anchor Verification
+## Phase 2: Cross-Section Consistency
 
-These anchors must hold whenever the related sections are both populated. Verify *as you go*, not at the end. When an anchor is broken, surface it explicitly to the user — never silently reconcile.
+These anchors must hold whenever the related sections are both populated. Verify *as you go*, not at the end. When an anchor breaks, surface explicitly — never silently reconcile.
 
-### 2.1 Section 5 ↔ Section 6 ping-pong (Use Cases ↔ Scenarios)
+### 2.1 Glossary ↔ everywhere (all branches)
 
-Whenever a scenario in Section 6 mentions a user action, check that a corresponding Use Case exists in Section 5.3. If missing:
+When a section introduces a domain noun absent from the Glossary, add it (or flag for the Glossary section if not yet authored). When the Glossary section is written, scan all earlier confirmed sections for terms used but undefined.
 
-- Update Section 5 with the missing UC.
-- Tell the user: "섹션 6에서 발견된 행위가 섹션 5에 누락. 5에 UC '{X}'를 추가했어요."
+### 2.2 Business Rules ↔ Permissions / Monetization (product branch)
 
-Mirror direction (Section 5 → Section 6): a UC with no scenario coverage → flag for Section 6.
+When a Business Rule references a role or a tier, reconcile against the Permissions and Monetization sections. Tier-gated rules must match Monetization access-tier definitions; role-gated rules must match the Permissions role list.
 
-### 2.2 섹션 6.5 (시나리오 x UC matrix)
+### 2.3 Non-goals ↔ Vision (product branch)
 
-After Section 5 and Section 6 are both confirmed, populate Section 6.5. If any scenario has no UC reference, or any UC has no scenario reference → flag and decide with user (add UC, drop UC, or document why isolated).
+Each Non-goal must be defensible against the Vision. A Non-goal that contradicts the Vision is either vision drift or mis-scoped — surface and force a choice.
 
-### 2.3 Section 8.3 (Feature x CRUD matrix)
+### 2.4 Compliance Matrix ↔ RFP Requirement Traceability (public branch)
 
-After Section 8 is confirmed, populate the Feature x CRUD matrix. If the unknown-cell ratio exceeds 30% → flag as a structural concern:
+Every requirement in the RFP Requirement Traceability section must have a corresponding row in the Compliance Matrix.
 
-> "섹션 8.3 매트릭스의 ?셀 비중이 {X}%로 임계(30%)를 넘었어요. Feature 정의가 충분히 결정되지 않은 신호일 수 있습니다. 작성 전 한 번 더 짚어볼까요?"
+### 2.5 SOW Scope ↔ Acceptance Criteria (contract branch)
 
-### 2.4 Section 8.1 ↔ Section 3.2 (Epics ↔ Goals)
+Each in-scope deliverable must have at least one Acceptance Criterion. Each Acceptance Criterion must trace back to a scope item.
 
-Each Epic in Section 8.1 must trace to at least one product goal in Section 3.2. If any Epic has no goal trace:
-
-> "Epic '{X}'가 어떤 목표에 기여하는지 불명확. 목표 매핑이 없으면 Epic 정당성이 흔들립니다. 추가하거나 Epic을 다시 정의하거나 드랍하는 방향 중 어떻게 할까요?"
-
-**Goal-laundering guard (custom-order only):** The recommended order writes Section 3 before Section 8, structurally preventing goals from being reverse-derived from Epics. This guard activates *only* when the user chose a custom order in which Section 3 is authored *after* Section 8 — in that case the existence-based trace check above cannot detect reverse-derived goals, and only the user can confirm independence:
-
-> "방금 작성한 섹션 3 목표들은 섹션 8 Epic 리스트에서 역으로 도출된 게 아니라, 독립적으로 식별된 측정 가능한 결과인가요?"
-
-If the user confirms reverse-derivation for any goal → insert `[가정: 이 목표는 섹션 8 Epic에서 역으로 도출 / {validator} / {YYYY-MM-DD}]` next to that goal and roll up to 섹션 9.4 in Phase 3.
-
-### 2.5 Section 6 ↔ Section 7 ping-pong (Scenarios ↔ Screen flow)
-
-Same pattern as 2.1: a screen flow without a covering scenario → flag and reconcile.
+(Branch-specific anchors with finer detail may live in `references/{branch}.md`.)
 
 ---
 
 ## Phase 3: Final Pass
 
-After all 9 sections are individually confirmed, run the final pass.
+After all sections are individually confirmed, run the final pass.
 
-### 3.1 Marker consolidation (→ Section 9.4)
+### 3.1 Route open decisions out of Steering
 
-Search `{PRD_FILE}` for all markers:
+If `{PENDING_DECISIONS}` is non-empty:
+
+> "Steering에서 빠지고 Initiative로 보낼 미결정 {N}건이 있습니다:
+> {numbered list with target_initiative_or_later}
+>
+> 'later' 항목들은 어느 Initiative로 보낼까요? 적합한 Initiative가 아직 없으면 '신규 Initiative 필요'라고 답해주세요. 그 항목은 후속 작업으로 표시합니다."
+
+For each item routed to an existing Initiative:
+- Use `notion-api` to append a `Risks/Assumptions` block (markdown bullet form) to that Initiative's page body. Do not auto-create new Initiatives — that is `write-sdlc-initiative`'s job.
+
+For items marked '신규 Initiative 필요':
+- Hold them in `{FOLLOWUP_INITIATIVES}` for the final report. Do not act.
+
+### 3.2 Verify no time-bound content leaked into Steering
+
+Write `{WORKING_BODY}` to a temp file and scan:
 
 ```bash
-grep -n -E '\[미결정:|\[가정:|\[검증필요:' "{PRD_FILE}"
+TMP=$(mktemp) && printf '%s' "{WORKING_BODY}" > "$TMP" && \
+  grep -n -E '\b(202[0-9]|203[0-9])-[01][0-9]-[0-3][0-9]\b|\bTBD\b|미정|by Q[1-4]|\bdeadline\b|일정|마일스톤' "$TMP" || true
 ```
 
-Consolidate into Section 9.4's four sub-tables:
-- 섹션 9.4.1 가정 (Assumptions)
-- 섹션 9.4.2 미결정 (Open Decisions)
-- 섹션 9.4.3 미해결 질문 (Open Questions)
-- 섹션 9.4.4 검증 필요 (Verification Needed)
+Any hit → surface to the user:
 
-Show the user the consolidated tables and ask:
+> "Steering에 시간 의존 내용으로 보이는 줄이 있어요:
+> {line — content}
+>
+> 이건 Initiative로 옮길까요, 아니면 Steering에 남길 정당한 이유가 있을까요?"
 
-> "마커 {N}개를 섹션 9.4에 통합했어요. 각 항목의 결정자/시한이 비어있는 게 {M}개 있어요. 지금 채울 수 있는 것 있을까요?"
+(`[가정: ... / 검증자 / YYYY-MM-DD]` 형식의 정당한 시한은 통과 처리한다.)
 
-Walk through each empty owner/deadline. Fill what's possible.
+### 3.3 Verify glossary completeness
 
-### 3.2 섹션 9.5 PRD 정합성 체크리스트
+Surface domain nouns mentioned in the body but absent from the Glossary section. For each missing term: ask the user to add a one-line definition, or confirm omission with reason.
 
-Walk through 섹션 9.5 line by line with the user. Each item gets 통과 / 미통과. For any 미통과:
+### 3.4 Push to Notion
 
-- Identify which section needs revision.
-- Decide together: revise now, or document why deferred.
+Once consistency is clean, push `{WORKING_BODY}` to Notion using the `notion-api` skill's page-content update flow. Use `replace_content` (full rewrite) — Steering is a single coherent document and section-level partial updates fragment headers.
 
-### 3.3 Finalize Section 1 (metadata)
-
-Now that the rest is locked, fill Section 1:
-
-- 섹션 1.1 문서 정보: today's date, author, version (default `v0.1`).
-- 섹션 1.2 변경 이력: first row = `v0.1 — 초안 — {YYYY-MM-DD}`.
-- 섹션 1.3 빼먹기 점검: meta-level questions (배포/공유 범위, 의사결정자 명시성).
-
-Ask:
-
-> "버전을 v0.1로 시작할까요, 아니면 다른 버전 번호를 쓰고 싶으신가요?"
-
-### 3.4 Guide-text disposition
-
-Ask:
-
-> "PRD_TEMPLATE.md에서 가져온 *가이드 텍스트*(섹션 인트로, 예시, 빼먹기 점검 블록 등)를 어떻게 할까요?
-> - (a) 그대로 둔다 — 살아있는 문서로 사용 (다음 리뷰 때 재검토에 유용)
-> - (b) 가이드 텍스트만 제거하고 사용자 컨텐츠만 남긴다 — 깔끔한 산출물
-> - (c) 점검 블록은 남기고 인트로/예시만 제거 — 균형형"
-
-Apply the user's choice via surgical Edit operations. Do NOT use `sed -i` for this — preserve the user's content exactly.
+Confirm success before announcing.
 
 ### 3.5 Final report
 
-> "PRD 초안이 `{PRD_FILE}`에 저장됐어요.
-> - 섹션 9개 모두 확정
-> - 미결정 마커 {N}개 (섹션 9.4 통합)
-> - 정합성 체크리스트 통과
+> "Steering 본문이 `{PROJECT_TITLE}` Project DB 페이지에 반영됐어요.
+> - 분기: `{BRANCH}` ({artifact name})
+> - 섹션 {N}개 모두 확정
+> - Initiative로 라우팅한 미결정: {M}건
+> - 신규 Initiative가 필요한 항목: {K}건 — `write-sdlc-initiative`로 후속 작성하세요.
 >
-> 다음 단계는 노션 업로드인데, 별도로 진행하시겠어요?"
+> 이 페이지는 이제부터 코딩 세션 시작 시 fetch되는 SSOT입니다."
 
 ---
 
 ## Markers (강제 사용 규칙)
 
-The skill MUST use these markers anytime a fact, owner, or deadline is uncertain. Never silently invent values.
+This skill uses **only one marker type**, sparingly:
 
 | Marker | Use when | Format |
 |---|---|---|
-| `[미결정: 결정자 / 시한]` | Decision exists but has no answer yet | `[미결정: {decision_owner} / {YYYY-MM-DD}]` |
-| `[가정: <statement> / 검증자 / 시한]` | Proceeding under an assumption that needs validation | `[가정: <one-line statement> / {validator} / {YYYY-MM-DD}]` |
-| `[검증필요: 검증자 / 시한]` | A claim needs external verification (data, market fact) | `[검증필요: {validator} / {YYYY-MM-DD}]` |
+| `[가정: <statement> / 검증자 / 시한]` | Source material implies a positive claim that needs explicit human confirmation, but is not yet contradicted | `[가정: <one-line> / {validator} / {YYYY-MM-DD}]` |
 
-Every marker that survives the section eventually rolls up to Section 9.4 in Phase 3.
+**Banned in Steering body:**
+- `[미결정: ...]` — Steering does not host open decisions. Route to Initiative.
+- `[검증필요: ...]` — same reason; Steering hosts only resolved invariants.
+- Bare `TBD`, `?`, `미정`.
 
-Rationale: the user's primary value from this skill is *forcing function for late-discovered decisions*. Markers are how that forcing function survives the section boundary instead of getting smoothed over into prose.
+Rationale: AI coding sessions treat Steering as authoritative. Any unresolved marker in Steering will be silently filled in by the agent's prior. A `[가정]` is acceptable only because it is a *positive claim with a named validator on the hook*, not an empty slot.
 
 ---
 
 ## Authoring Rules
 
-- **Output language**: Korean by default. Section headings stay as defined in `PRD_TEMPLATE.md`.
-- **Critique format**: free-form. Do not impose a structured rubric on the user.
-- **Confirmation phrases**: `"확정"`, `"승인"`. Anything else continues the current section's revise loop.
-- **Never advance unilaterally**: confirmation must come from the user, not be inferred from silence or partial agreement.
-- **Never invent facts**: if `{SOURCE_CONTEXT}` is silent and the user has not answered, use a marker.
-- **Examples are illustrative**: when the template embeds a SaaS / B2B / dental example, *do not* inherit those identifiers into the user's PRD. Substitute the user's actual domain.
-- **Live edits, not rewrites**: when revising after critique, use `Edit` for surgical changes — do not regenerate the whole section from scratch unless the user explicitly asks for a clean rewrite.
+- **Output language**: Korean by default. Section headings follow the loaded `{TEMPLATE_PATH}`.
+- **Critique format**: free-form. Do not impose a structured rubric.
+- **Confirmation phrases**: `"확정"`, `"승인"`. Silence ≠ confirmation.
+- **Never invent facts**: silent source + no user answer → ask, or route to Initiative. Never auto-fill.
+- **Examples are illustrative**: never inherit reference-template example identifiers into the user's document. Substitute real project values.
+- **Live edits, not rewrites**: when revising after critique, surgical changes — do not regenerate the whole section unless the user explicitly asks.
+- **One push, not many**: write to Notion once at Phase 3.4, not per section.
 
 ---
 
 ## Error Handling
 
-- **Source file missing/unreadable** → tell the user, ask for an alternative or proceed with `{SOURCE_CONTEXT} = ""`.
-- **`{PRD_FILE}` already exists at cwd** → use the (a)/(b)/(c) prompt in Section 0.2.
-- **Template file missing** at `${CLAUDE_PLUGIN_ROOT}/skills/write-prd/reference/PRD_TEMPLATE.md` → stop and surface: "`PRD_TEMPLATE.md`를 찾을 수 없어요. 플러그인 설치 상태를 확인해 주세요."
-- **Anchor verification fails repeatedly** → after 2 unresolved flags on the same anchor, save state, surface to user: "이 정합성 닻은 추가 결정이 필요해 보입니다. 잠시 멈추고 결정자에게 확인 후 재개하시는 게 좋을 것 같아요."
-- **User wants to pause mid-section** → write current draft to `{PRD_FILE}` with a `<!-- DRAFT: section X in progress -->` marker, save current state in chat, allow resume next session.
+- **Project page not found** → ask the user for URL/ID directly. Do not auto-create.
+- **Branch detection ambiguous** (e.g., `type` set to a value outside the three) → ask user; do not guess.
+- **Template file missing** at `${CLAUDE_PLUGIN_ROOT}/skills/write-project-steering/references/{branch}.md` → stop and surface: "분기 템플릿을 찾을 수 없어요. 플러그인 설치 상태를 확인해 주세요."
+- **Notion push fails** at Phase 3.4 → save `{WORKING_BODY}` to `./.steering-draft-{YYYYMMDD-HHMM}.md` and surface the error. Do not retry blindly.
+- **User wants to pause mid-section** → write `{WORKING_BODY}` to `./.steering-draft-{YYYYMMDD-HHMM}.md` with a `<!-- DRAFT: section X in progress -->` marker, save state in chat, allow resume next session.
 
 ---
 
 ## Anti-Patterns (DO NOT do these)
 
 - **Do not write all sections in one shot.** The forcing function *is* the per-section cycle.
-- **Do not skip 빼먹기 점검 blocks.** The whole point is surfacing decisions before solution stage.
-- **Do not infer confirmation.** "응", "OK", "그래" alone are not enough — wait for `"확정"` or `"승인"`.
-- **Do not overwrite the user's free-form critique with a fixed template.** Let them speak in their own terms.
-- **Do not promote `[가정]` to fact silently.** If the user accepts an assumption, leave the marker — its job is to track that an external check is owed.
-- **Do not strip guide text without asking.** Section 3.4 is the only place where guide-text disposition is decided.
-- **Do not borrow concrete domain examples** from the reference template (specific company names, real product names from the user's industry). The template's examples are SaaS-generic for that reason.
-- **Do not skip the recommended-order announcement (Section 0.3).** The order encodes *which decisions depend on which* — silent default ordering loses that signal.
+- **Do not skip 빼먹기 점검 blocks.** They are the surfacing mechanism for late-discovered decisions.
+- **Do not infer confirmation.** "응", "OK", "그래" alone are not enough.
+- **Do not allow `[미결정]` into Steering body.** Route to Initiative instead.
+- **Do not include success metrics, milestones, or roadmap content.** Those belong in the Initiative layer.
+- **Do not push partial sections to Notion.** One full push at Phase 3.4.
+- **Do not borrow concrete domain examples** from reference templates. Substitute project-real values.
+- **Do not skip the recommended-order announcement (Phase 0.5).** The order encodes dependency direction; silent default ordering loses that signal.
