@@ -1,6 +1,6 @@
 ---
 name: capture-request
-description: Writes a new Request page in Notion's Requests DB from a free-form description, sizing the body to match the actual work. Use when the user wants to formalize a 업무 지시 / 티켓 / 작업 요청 / hand-off — including "업무 지시 써줘", "티켓 작성해줘", "task 만들어줘". Also trigger when the user describes a task to delegate without explicitly asking for a document. Do NOT use for 2–6주 strategic bets (`write-sdlc-trigger`), implementation specs (`write-sdlc-spec`), or meeting notes (`write-meeting-notes`).
+description: Writes a new Request page in Notion's Requests DB from a free-form description, sizing the body to match the actual work. Use when the user wants to formalize a 업무 지시 / 티켓 / 작업 요청 / hand-off — including "업무 지시 써줘", "티켓 작성해줘", "task 만들어줘". Also trigger when the user describes a task to delegate without explicitly asking for a document. Do NOT use for 2–6주 strategic bets (`write-sdlc-initiative`), implementation specs (`write-sdlc-spec`), or meeting notes (`write-meeting-notes`).
 ---
 
 # Task Writer Skill
@@ -17,7 +17,7 @@ The reviewer that used to live in `task-reviewer` is fully absorbed here. Qualit
 
 ## When NOT to Use
 
-- 2–6주짜리 전략적 베팅 → use `write-sdlc-trigger` (a Trigger, not a Request).
+- 2–6주짜리 전략적 베팅 → use `write-sdlc-initiative` (an Initiative, not a Request).
 - 이미 만들어진 Request에 구현 스펙을 붙여야 함 → use `write-sdlc-spec`.
 - 회의록 정리 → use `write-meeting-notes`.
 - The user has no concrete description, only a vague "뭔가 정리해줘" — push back and ask what the work actually is before invoking this skill.
@@ -57,7 +57,7 @@ Concrete identifiers in this skill's Good/Bad blocks (project names, role names,
 
 | Phase                          | What happens                                                                |
 | ------------------------------ | --------------------------------------------------------------------------- |
-| 0. Intake                      | User dumps description; AI parses; anti-pattern check (Trigger-shaped?)     |
+| 0. Intake                      | User dumps description; AI parses; anti-pattern check (Initiative-shaped?)     |
 | 1. Project resolution (Gate 1) | Match against `projects_db`; user picks, or marks "없음"                    |
 | 2. Classification (Gate 2)     | AI proposes tier + 유형 + 카테고리 + 제목 + 요점; user confirms in one shot |
 | 3. Drafting                    | AI writes body per tier rules; for 간결, dialogues if Why is missing        |
@@ -76,13 +76,13 @@ The user opens with either a one-line ask or a multi-paragraph dump. Read what t
 
 If the dump is genuinely too thin to proceed (one-line ask with no clue what the actual work is), ask one consolidated probe before continuing. Do not advance to Phase 1 with insufficient signal — that just produces hallucinated Requests.
 
-### Anti-pattern check: Trigger-shaped Request
+### Anti-pattern check: Initiative-shaped Request
 
 If the dump looks like a 2–6주 strategic bet — multiple stakeholders, ambiguous outcome, requires DIBB-style framing, scope spans several teams' worth of work — pause and ask:
 
-> "이 작업은 단일 Request보다 큰 베팅으로 보입니다 ({sentence describing why — e.g., '범위가 여러 팀에 걸쳐 있고, 결과물 정의 자체에 합의가 필요해 보임'}). `write-sdlc-trigger`로 Trigger 문서를 먼저 만들고, 거기서 분해된 하위 Request들을 채우는 흐름이 더 적절할 수 있습니다. 그래도 단일 Request로 작성할까요?"
+> "이 작업은 단일 Request보다 큰 베팅으로 보입니다 ({sentence describing why — e.g., '범위가 여러 팀에 걸쳐 있고, 결과물 정의 자체에 합의가 필요해 보임'}). `write-sdlc-initiative`로 이니셔티브 문서를 먼저 만들고, 거기서 분해된 하위 Request들을 채우는 흐름이 더 적절할 수 있습니다. 그래도 단일 Request로 작성할까요?"
 
-If the user confirms 단일 Request, proceed. If they switch, exit this skill and surface `write-sdlc-trigger`.
+If the user confirms 단일 Request, proceed. If they switch, exit this skill and surface `write-sdlc-initiative`.
 
 ### Org context check (one-shot, before drafting)
 
@@ -419,7 +419,7 @@ Return the URL in the final message.
 - **Do not skip explicit review for 상세 tier.** That's the whole reason the user picked 상세.
 - **Do not fabricate a project relation.** If unresolved after one clarification, mark "없음".
 - **Do not pair `비개발` with `기능 *` 유형.** The category-type pair has only valid combinations.
-- **Do not write a body for a Trigger-shaped ask.** Surface the redirect to `write-sdlc-trigger` first.
+- **Do not write a body for a Initiative-shaped ask.** Surface the redirect to `write-sdlc-initiative` first.
 - **Do not invent tools to satisfy the currency check.** Currency check fires only when the body actually names a specific tool.
 - **Do not use Notion templates.** Content is generated fresh.
 - **Do not nest bullet lists inside blockquotes (`> -`).** Notion's markdown parser drops the list out of the quote and renders raw `-` characters as body text. For "다음 중 하나에 해당하면…" 같이 한 줄 리드 + 조건 나열 패턴은 리드를 일반 단락으로 두고 그 아래에 일반 bullet을 둘 것. Single-line blockquotes(사용자 발화·인용)는 무방.

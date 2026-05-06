@@ -1,16 +1,16 @@
 ---
-name: decompose-sdlc-trigger
-description: Decomposes a 트리거(Initiative) document into N sub-Requests in the Notion Requests DB via AI-draft + Human-edit loop. Reads the parent Trigger's Fat Marker Sketch, Success Criteria, Appetite, and Rabbit Holes; proposes 3–7 candidate sub-Requests aligned with INVEST criteria (Independent, Negotiable, Valuable, Estimable, Small, Testable); lets the human review/edit/reject/add in a single approval gate; then batch-writes to Notion with proper relations. Use when the user says "트리거 분해", "하위 요구사항 나눠줘", "이 Trigger를 Requests로 쪼개줘", "decompose trigger", "break down initiative", or after a Trigger's Phase 8 Review has completed and sub-work items need to exist in Requests DB. Do NOT use for small Requests that directly map to a single Spec (bypass to write-sdlc-spec) or for Triggers without a completed Fat Marker Sketch.
+name: decompose-sdlc-initiative
+description: Decomposes a 이니셔티브 document into N sub-Requests in the Notion Requests DB via AI-draft + Human-edit loop. Reads the parent Initiative's Fat Marker Sketch, Success Criteria, Appetite, and Rabbit Holes; proposes 3–7 candidate sub-Requests aligned with INVEST criteria (Independent, Negotiable, Valuable, Estimable, Small, Testable); lets the human review/edit/reject/add in a single approval gate; then batch-writes to Notion with proper relations. Use when the user says "이니셔티브 분해", "하위 요구사항 나눠줘", "이 Initiative를 Requests로 쪼개줘", "decompose initiative", "break down initiative", or after a Initiative's Phase 8 Review has completed and sub-work items need to exist in Requests DB. Do NOT use for small Requests that directly map to a single Spec (bypass to write-sdlc-spec) or for Initiatives without a completed Fat Marker Sketch.
 ---
 
-# Decompose SDLC Trigger
+# Decompose SDLC Initiative
 
-A 트리거(Initiative) is a 2–6 week strategic bet. It is not directly executable: it must be decomposed into atomic sub-Requests that each become inputs to `write-sdlc-spec`. This skill performs that decomposition: AI proposes candidates grounded in the Trigger's Fat Marker Sketch, human reviews with forcing-function pushback, and the final set is batch-written to Notion Requests DB with proper parent relations.
+A 이니셔티브 is a 2–6 week strategic bet. It is not directly executable: it must be decomposed into atomic sub-Requests that each become inputs to `write-sdlc-spec`. This skill performs that decomposition: AI proposes candidates grounded in the Initiative's Fat Marker Sketch, human reviews with forcing-function pushback, and the final set is batch-written to Notion Requests DB with proper parent relations.
 
 **Position in pipeline:**
 
 ```
-Trigger (Initiative)
+Initiative (Initiative)
     │
     ▼
   [THIS SKILL]
@@ -24,16 +24,16 @@ N sub-Requests (in Requests DB)
 
 ## When to Use
 
-- User has finalized a Trigger (상태 not Killed) and wants to produce executable sub-work.
-- User says "트리거 분해", "하위 요구사항 나눠줘", "decompose trigger", "break down initiative".
-- Re-decomposition: user wants to add more sub-Requests under an already-decomposed Trigger.
+- User has finalized a Initiative (상태 not Killed) and wants to produce executable sub-work.
+- User says "이니셔티브 분해", "하위 요구사항 나눠줘", "decompose initiative", "break down initiative".
+- Re-decomposition: user wants to add more sub-Requests under an already-decomposed Initiative.
 
 ## When NOT to Use
 
 - Request that maps 1:1 to a Spec → use `write-sdlc-spec` directly.
-- Trigger without a completed Fat Marker Sketch → push back to complete the Trigger first.
+- Initiative without a completed Fat Marker Sketch → push back to complete the Initiative first.
 - Non-dev request types (지원 요청, 행정 요청, 리서치 요청): these do not follow this pipeline.
-- A Killed Trigger: decomposition after kill is wasted effort; either revive or start new.
+- A Killed Initiative: decomposition after kill is wasted effort; either revive or start new.
 
 ## Prerequisites
 
@@ -41,17 +41,17 @@ N sub-Requests (in Requests DB)
 
 All Notion access goes through the `notion-api` skill's bash scripts. Its preconditions apply verbatim: `~/.datamktkorea/config.json` with `notion_token` + `notion_dbs` map, `jq` installed, the Integration shared with `triggers_db`, `requests_db`, and `projects_db`. If any script exits with code 2 (precondition failure), surface its stderr hint to the user and stop.
 
-### 2. Parent Trigger specified
+### 2. Parent Initiative specified
 
 The user must provide one of:
 
-- Trigger page URL
-- Trigger page ID
+- Initiative page URL
+- Initiative page ID
 - A keyword to search (skill lists matches and asks user to pick)
 
 If none provided:
 
-> "분해할 Trigger를 알려주세요. Notion URL / 페이지 ID / 검색 키워드 중 하나로."
+> "분해할 Initiative를 알려주세요. Notion URL / 페이지 ID / 검색 키워드 중 하나로."
 
 ## Scripts used
 
@@ -88,7 +88,7 @@ Single approval gate per candidate (Accept / Edit / Reject / Skip) plus one fina
 
 | Phase                      | Responsibility                                                                |
 | -------------------------- | ----------------------------------------------------------------------------- |
-| 0. Preflight               | Load Trigger, existing children, parse sections                               |
+| 0. Preflight               | Load Initiative, existing children, parse sections                               |
 | 1. AI Strategy Draft       | AI proposes splitting axis + expected N; user approves or redirects           |
 | 2. AI Candidate Generation | AI emits N candidates per approved strategy                                   |
 | 2.5. AI Self-Critique      | AI runs INVEST validator + anti-pattern check on its own output, flags inline |
@@ -97,13 +97,13 @@ Single approval gate per candidate (Accept / Edit / Reject / Skip) plus one fina
 
 ## Phase 0: Preflight
 
-### 0.1 Resolve parent Trigger
+### 0.1 Resolve parent Initiative
 
 If the user supplied a URL or page ID, fetch its properties and body:
 
 ```bash
-fetch-page-properties.sh "<trigger-url-or-id>"
-fetch-page.sh "<trigger-url-or-id>" --markdown-only
+fetch-page-properties.sh "<initiative-url-or-id>"
+fetch-page.sh "<initiative-url-or-id>" --markdown-only
 ```
 
 If the user gave a keyword, search Triggers DB by title:
@@ -117,7 +117,7 @@ Show top 5 with title (`.properties["이름"].title[0].plain_text`) and Appetite
 
 ### 0.2 Parse required sections
 
-Extract from Trigger body:
+Extract from Initiative body:
 
 - **§1 TL;DR**: for context in AI prompt.
 - **§4 Fat Marker Sketch**: primary input (핵심 흐름 steps, 관건 지점, 접점).
@@ -127,28 +127,28 @@ Extract from Trigger body:
 
 If Fat Marker Sketch is empty or section is missing:
 
-> "이 Trigger의 Fat Marker Sketch가 비어있습니다. 분해의 근거가 되는 섹션이 없으면 AI 초안이 의미가 없습니다. 먼저 Trigger §4를 완성해주세요."
+> "이 Initiative의 Fat Marker Sketch가 비어있습니다. 분해의 근거가 되는 섹션이 없으면 AI 초안이 의미가 없습니다. 먼저 Initiative §4를 완성해주세요."
 
 and stop.
 
 ### 0.3 Load Project relation
 
-Fetch the Trigger's `Projects DB` relation value (via `fetch-page-properties.sh` from 0.1). Save for child Requests to inherit.
+Fetch the Initiative's `Projects DB` relation value (via `fetch-page-properties.sh` from 0.1). Save for child Requests to inherit.
 
 ### 0.4 Load existing children (re-decomposition case)
 
-Query Requests DB with a server-side relation filter pointing at this Trigger:
+Query Requests DB with a server-side relation filter pointing at this Initiative:
 
 ```bash
 query-db.sh requests_db --page-size 25 \
-  --filter "$(jq -n --arg tid "<parent-trigger-id>" '{property:"Triggers DB", relation:{contains:$tid}}')"
+  --filter "$(jq -n --arg tid "<parent-initiative-id>" '{property:"Triggers DB", relation:{contains:$tid}}')"
 ```
 
 No client-side filtering needed — the API returns only Requests whose `Triggers DB` relation contains the parent.
 
 If existing children found, surface:
 
-> "이 Trigger에 이미 연결된 하위 Request가 **{N}개** 있습니다:
+> "이 Initiative에 이미 연결된 하위 Request가 **{N}개** 있습니다:
 > {numbered list with titles}
 >
 > (a) 추가 분해: 기존 유지 + 새 후보 추가
@@ -160,7 +160,7 @@ If existing children found, surface:
 
 > "준비 완료:
 >
-> - Trigger: {title}
+> - Initiative: {title}
 > - Appetite: {2주/6주} ({N} dev-days 예산)
 > - 핵심 흐름 단계: {N}개
 > - Rabbit Holes: {N}개 · No-gos: {N}개
@@ -173,16 +173,16 @@ If existing children found, surface:
 
 ### 1.1 AI produces decomposition strategy
 
-Using the parsed Trigger, the AI writes a 3–5 sentence strategy that MUST include:
+Using the parsed Initiative, the AI writes a 3–5 sentence strategy that MUST include:
 
 - **Splitting axis** chosen (Paths / Data / Interfaces / Rules: SPIDR).
-- **Justification** citing a specific Trigger section.
+- **Justification** citing a specific Initiative section.
 - **Expected N** (3–7 typical; 2–3 for 2주 Appetite; 3–7 for 6주).
 - **Unknowns** explicitly noted as Spikes (not sub-Requests) for future Spec phase.
 
 ### 1.2 Heuristics for axis selection
 
-| Trigger signal                         | Suggested axis              |
+| Initiative signal                         | Suggested axis              |
 | -------------------------------------- | --------------------------- |
 | Sequential numbered steps in 핵심 흐름 | **Paths** (primary default) |
 | Multiple input/output formats          | **Data**                    |
@@ -197,7 +197,7 @@ When in doubt, default to **Paths**: it matches Fat Marker Sketch structure dire
 >
 > **분해 축:** Paths (Fat Marker Sketch §4의 핵심 흐름 {N}단계를 따름)
 > **예상 하위 Request 수:** {N}
-> **근거:** {one-line from Trigger §4 or §7}
+> **근거:** {one-line from Initiative §4 or §7}
 > **Spike 마크 (Spec 단계로):** {any unknown regions from §4}
 >
 > 이 전략으로 진행? (yes / redirect '축=Data' / edit)"
@@ -206,7 +206,7 @@ If user redirects, accept and re-plan. Do NOT generate candidates until strategy
 
 ### 1.4 Forcing function
 
-Strategy must name one SPIDR letter and cite a specific Trigger section line or concept. Vague strategies (e.g., "split by logical chunks") get rejected by the skill itself before showing to user.
+Strategy must name one SPIDR letter and cite a specific Initiative section line or concept. Vague strategies (e.g., "split by logical chunks") get rejected by the skill itself before showing to user.
 
 ## Phase 2: AI Candidate Generation
 
@@ -217,28 +217,28 @@ The AI emits N candidates. Each candidate must have all 5 body sections draft-fi
 - **제목** (Title): verb + concrete object, not a noun phrase
 - **유형**: one of: 기능 추가 / 기능 변경 / 기능 개선 / 기능 에러 (per heuristic below)
 - **크기** (Size): one of S (≤2 dev-days) / M (3–4 dev-days) / L (5–7 dev-days)
-- **우선순위** (Priority): default inherit from Trigger's 우선순위; candidate can mark higher for cut-line
+- **우선순위** (Priority): default inherit from Initiative's 우선순위; candidate can mark higher for cut-line
 
 ### 2.2 유형 assignment heuristic
 
 - **기능 추가**: candidate introduces new user-facing capability (default when ambiguous)
 - **기능 변경**: candidate modifies existing behavior's contract
 - **기능 개선**: candidate improves non-functional quality (perf, UX polish) without contract change
-- **기능 에러**: candidate addresses a defect explicitly referenced in Trigger §2 Problem
+- **기능 에러**: candidate addresses a defect explicitly referenced in Initiative §2 Problem
 
 ### 2.3 Fat Marker Sketch → Candidate mapping
 
 For Paths axis:
 
 - Each numbered step in 핵심 흐름 → one candidate (default 1:1).
-- **관건 지점** noted in Trigger: candidate carrying that step gets a warning flag: "관건 지점 포함: Spec 단계에서 특히 주의".
+- **관건 지점** noted in Initiative: candidate carrying that step gets a warning flag: "관건 지점 포함: Spec 단계에서 특히 주의".
 - **접점** (integration points): candidate carrying the interface gets size +1 bump (boundary work is costly).
 
 ### 2.4 Rabbit Holes / No-gos handling
 
 - For each candidate, AI token-checks scope against No-go text. If overlap, **drop candidate and flag** in internal trace:
   > "{candidate title} was dropped: scope intersects No-go '{no-go text}'."
-- Rabbit Holes are WARNINGS, not work. AI must NEVER emit a candidate whose goal matches Rabbit Hole description. If AI detects Rabbit Hole as the essence of the work, return a single-line: "이 작업은 Trigger에 Rabbit Hole로 표기되어 있습니다. Trigger 자체의 재검토를 권장합니다."
+- Rabbit Holes are WARNINGS, not work. AI must NEVER emit a candidate whose goal matches Rabbit Hole description. If AI detects Rabbit Hole as the essence of the work, return a single-line: "이 작업은 Initiative에 Rabbit Hole로 표기되어 있습니다. Initiative 자체의 재검토를 권장합니다."
 
 ### 2.5 Constraints
 
@@ -265,7 +265,7 @@ Before showing candidates to user, the AI runs the INVEST validator and anti-pat
 **V: Valuable**
 
 - Goal must complete "[사용자/시스템]이 X를 할 수 있게 된다". If purely internal (e.g., "Refactor auth"), flag `[No user-visible outcome]`.
-- Trigger 기여 section must cite a specific Success Criterion from Trigger §7. If generic ("전반적 목표에 기여"), flag `[Unspecific contribution]`.
+- Initiative 기여 section must cite a specific Success Criterion from Initiative §7. If generic ("전반적 목표에 기여"), flag `[Unspecific contribution]`.
 
 **E: Estimable**
 
@@ -309,7 +309,7 @@ Per-candidate block:
 
 목적: {one-line goal}
 
-Trigger 기여: {specific success criterion reference}
+Initiative 기여: {specific success criterion reference}
 
 범위:
   포함: {what's in}
@@ -319,7 +319,7 @@ Trigger 기여: {specific success criterion reference}
   - {hint 1}
   - {hint 2}
 
-참조: 부모 Trigger {title}. 관련 하위: #{N} ({relation}).
+참조: 부모 Initiative {title}. 관련 하위: #{N} ({relation}).
 
 ⚠ flags: [Independence: references #3] [Size: borderline L]
 
@@ -350,7 +350,7 @@ User issues `finalize` (or button). Skill runs Phase 3.5 validation.
 
 **Coverage check**
 
-- Extract core-flow step list from Trigger §4.
+- Extract core-flow step list from Initiative §4.
 - Build reverse index: which sub-Request addresses which step.
 - **Fail:** any step has zero sub-Requests mapped.
 - **Message:** "핵심 흐름 단계 **{N: '편집'}**이 어떤 하위 Request에도 매핑되지 않았습니다. 누락입니까, 의도적 제외입니까?"
@@ -360,7 +360,7 @@ User issues `finalize` (or button). Skill runs Phase 3.5 validation.
 - Sum T-shirt sizes (S=2, M=4, L=7 dev-days).
 - Compare with Appetite budget (2주=10 · 6주=30 for single dev; ×team size if user specified).
 - **Fail condition:** sum > 1.2 × Appetite.
-- **Message:** "예상 공수 **{X}일**이 Appetite 예산 **{Y}일**을 초과합니다. 범위 축소 또는 Trigger Appetite 재검토."
+- **Message:** "예상 공수 **{X}일**이 Appetite 예산 **{Y}일**을 초과합니다. 범위 축소 또는 Initiative Appetite 재검토."
 
 **Independence**
 
@@ -369,7 +369,7 @@ User issues `finalize` (or button). Skill runs Phase 3.5 validation.
 
 **No-go intersection**
 
-- Pairwise token-check sub-Request scope against Trigger §6 No-gos.
+- Pairwise token-check sub-Request scope against Initiative §6 No-gos.
 - **Fail:** any intersection.
 - **Message:** "하위 Request #{N}의 범위가 No-go '{text}'와 충돌합니다."
 
@@ -388,16 +388,16 @@ Reason is prepended to the Notion write as a callout.
 
 If 3 rounds of review produce no accepted candidates:
 
-> "3번째 반복에도 확정된 하위 Request가 없습니다. Trigger 자체가 분해 가능한 수준까지 구체화되지 않았을 수 있습니다. 다음 중 선택:
+> "3번째 반복에도 확정된 하위 Request가 없습니다. Initiative 자체가 분해 가능한 수준까지 구체화되지 않았을 수 있습니다. 다음 중 선택:
 > (a) 분해 축을 바꿔 다시 시도 ('Data'로 재전략)
 > (b) 수동 모드: AI 초안 없이 직접 후보 입력
-> (c) 중단: Trigger 구체화 후 재시도"
+> (c) 중단: Initiative 구체화 후 재시도"
 
 ## Phase 4: Batch Write to Notion
 
 ### 4.1 Confirm
 
-> "{N}개 하위 Request를 Notion Requests DB에 생성합니다. 모두 부모 Trigger **{title}**에 연결됩니다. 진행?"
+> "{N}개 하위 Request를 Notion Requests DB에 생성합니다. 모두 부모 Initiative **{title}**에 연결됩니다. 진행?"
 
 ### 4.2 Batch write
 
@@ -414,7 +414,7 @@ for cand_json in "${candidates[@]}"; do
 
   properties=$(jq -n \
     --arg title "$title" --arg type "$type" --arg priority "$priority" \
-    --arg tid "<parent-trigger-id>" --arg pid "<project-id>" \
+    --arg tid "<parent-initiative-id>" --arg pid "<project-id>" \
     '{
       "이름":        {"title":[{"text":{"content":$title}}]},
       "유형":        {"select":{"name":$type}},
@@ -432,7 +432,7 @@ for cand_json in "${candidates[@]}"; do
 done
 ```
 
-Do NOT set `상태` explicitly: it defaults to "미할당" automatically when 담당자 is empty. The child-request relation key is `Triggers DB` (not `트리거`) per the `requests_db` schema in `notion-api/SKILL.md`.
+Do NOT set `상태` explicitly: it defaults to "미할당" automatically when 담당자 is empty. The child-request relation key is `Triggers DB` (not `이니셔티브`) per the `requests_db` schema in `notion-api/SKILL.md`.
 
 ### 4.3 Partial-failure handling
 
@@ -446,7 +446,7 @@ After the loop:
 
 > "분해 완료:
 >
-> Trigger: {title}
+> Initiative: {title}
 > 생성된 하위 Request: {N}개
 >
 > {numbered list with titles + 유형 + size + Notion URL}
@@ -465,9 +465,9 @@ Each sub-Request's body in Notion. Target 150–300 words total.
 
 <this sub-Request가 완료되면 [사용자/시스템]이 [구체적 능력]을 할 수 있게 된다>
 
-## 2. Trigger 기여
+## 2. Initiative 기여
 
-부모 Trigger의 성공 기준 `<quoted from Trigger §7>`에 기여한다.
+부모 Initiative의 성공 기준 `<quoted from Initiative §7>`에 기여한다.
 이 하위 Request가 <측정 가능 결과>를 달성하면 전체 목표에서 <~%/단계> 진전이다.
 
 ## 3. 범위
@@ -484,7 +484,7 @@ Each sub-Request's body in Notion. Target 150–300 words total.
 
 ## 5. 참조
 
-- 부모 Trigger: <title + Notion link>
+- 부모 Initiative: <title + Notion link>
 - 관련 하위 Request: #<N> <title> (<relation: 선행/후행/병렬>)
 ```
 
@@ -496,10 +496,10 @@ Each sub-Request's body in Notion. Target 150–300 words total.
 - Good: "작가가 업로드한 원고 PDF에서 목차를 자동 추출해 편집 가능한 형태로 볼 수 있게 된다."
 - Bad: "PDF 파싱 개선" (no actor, no outcome)
 
-**§2 Trigger 기여: 20–40 words**
+**§2 Initiative 기여: 20–40 words**
 
-- Good: "Trigger 성공기준 '목차 생성 시간 2분 이내' 중 추출 단계. 현재 5분 → 목표 1분."
-- Bad: "Trigger의 전반적 목표에 기여"
+- Good: "Initiative 성공기준 '목차 생성 시간 2분 이내' 중 추출 단계. 현재 5분 → 목표 1분."
+- Bad: "Initiative의 전반적 목표에 기여"
 
 **§3 범위: 40–80 words**
 
@@ -517,7 +517,7 @@ Each sub-Request's body in Notion. Target 150–300 words total.
 
 **§5 참조: 20–40 words**
 
-- Good: "부모: '자동 목차 생성' Trigger. 관련: #3 '목차 편집 UI' (이 Request의 출력이 입력)."
+- Good: "부모: '자동 목차 생성' Initiative. 관련: #3 '목차 편집 UI' (이 Request의 출력이 입력)."
 - Bad: "관련 문서 참조."
 
 ## Forcing Function Stems (copy-ready)
@@ -526,21 +526,21 @@ The skill surfaces these verbatim when appropriate.
 
 **Phase 0: Preflight**
 
-- "이 Trigger의 Appetite는 **{2주/6주}**입니다. 하위 Request 총 공수가 이를 넘지 않도록 합니다."
+- "이 Initiative의 Appetite는 **{2주/6주}**입니다. 하위 Request 총 공수가 이를 넘지 않도록 합니다."
 - "Fat Marker Sketch의 핵심 흐름 단계 **{N}개**를 확인했습니다. 각 단계가 하위 Request로 표현될 수 있나요?"
 
 **Phase 1: Strategy**
 
 - "어떤 축으로 분해하시겠어요? Paths(흐름) / Data(데이터) / Interfaces(인터페이스) / Rules(규칙)?"
-- "선택한 분해 축이 Trigger의 Success Criteria와 어떻게 연결되는지 한 문장으로 설명해주세요."
+- "선택한 분해 축이 Initiative의 Success Criteria와 어떻게 연결되는지 한 문장으로 설명해주세요."
 
 **Phase 2–3: Review**
 
 - "이 하위 Request가 완료되면 사용자가 구체적으로 무엇을 할 수 있게 되나요?"
 - "이 문장은 Spec 단계 같습니다. 지금은 '무엇'만 적고 '어떻게'는 미루세요."
 - "이 하위 Request의 크기는 S / M / L 중 어느 정도인가요?"
-- "Trigger의 No-go 항목 **'{text}'**과 충돌하지 않는지 확인해주세요."
-- "이 하위 Request는 Trigger의 어떤 성공 기준에 직접 기여하나요?"
+- "Initiative의 No-go 항목 **'{text}'**과 충돌하지 않는지 확인해주세요."
+- "이 하위 Request는 Initiative의 어떤 성공 기준에 직접 기여하나요?"
 - "완료 여부를 5분 안에 객관적으로 확인할 수 있는 조건을 1–2개 적어주세요."
 
 **Set-level (finalize)**
@@ -558,20 +558,20 @@ The skill surfaces these verbatim when appropriate.
 
 **Phase 4: Write**
 
-- "**{N}개** 하위 Request를 Notion Requests DB에 생성합니다. 모두 부모 Trigger에 연결됩니다. 진행할까요?"
+- "**{N}개** 하위 Request를 Notion Requests DB에 생성합니다. 모두 부모 Initiative에 연결됩니다. 진행할까요?"
 - "생성 후에도 언제든 재분해 가능합니다. 기존 하위는 유지/병합/교체 중 선택."
 
 **Abort**
 
-- "반복 3회에도 확정된 하위 Request가 없습니다. Trigger 자체의 구체성을 점검하는 것이 더 빠를 수 있습니다. 중단할까요?"
+- "반복 3회에도 확정된 하위 Request가 없습니다. Initiative 자체의 구체성을 점검하는 것이 더 빠를 수 있습니다. 중단할까요?"
 
 ## Error Handling
 
 - **notion-api precondition failed (exit 2)** → surface the script's stderr hint (missing config, jq, integration access) and stop.
-- **Trigger URL/ID invalid** → ask user to re-supply.
-- **Fat Marker Sketch empty** → stop at Phase 0.2, instruct to complete Trigger.
-- **AI proposes 0 candidates** → halt Phase 2, surface "분해 실패: Fat Marker Sketch에서 핵심 흐름을 찾을 수 없습니다. Trigger를 더 구체화해주세요."
-- **AI proposes >10 candidates** → AI must self-trim to 10 max by grouping. If still 10+, skill keeps top 10 by size (largest first) and warns: "AI가 과다 분해했습니다. 상위 10개만 표시. Trigger가 실제로는 여러 Trigger로 쪼개져야 할 수 있습니다."
+- **Initiative URL/ID invalid** → ask user to re-supply.
+- **Fat Marker Sketch empty** → stop at Phase 0.2, instruct to complete Initiative.
+- **AI proposes 0 candidates** → halt Phase 2, surface "분해 실패: Fat Marker Sketch에서 핵심 흐름을 찾을 수 없습니다. Initiative를 더 구체화해주세요."
+- **AI proposes >10 candidates** → AI must self-trim to 10 max by grouping. If still 10+, skill keeps top 10 by size (largest first) and warns: "AI가 과다 분해했습니다. 상위 10개만 표시. Initiative가 실제로는 여러 Initiative로 쪼개져야 할 수 있습니다."
 - **User rejects all 3 iterations** → see Phase 3.6 abort options.
 - **Existing children collision** → surface side-by-side with skip/replace/rename options.
 - **Batch write partial failure** → surface created + failed list; offer retry for failed only.
@@ -584,7 +584,7 @@ The skill surfaces these verbatim when appropriate.
 - **Do not emit Rabbit Holes as work.** They are warnings.
 - **Do not create sub-Request-of-sub-Request.** Flat structure only.
 - **Do not set `상태` on child Requests.** Let default "미할당" apply.
-- **Do not set `출처` on child Requests.** 출처 is for raw intake only; sub-Requests inherit from Trigger context (its Source lives on Trigger itself, not duplicated).
+- **Do not set `출처` on child Requests.** 출처 is for raw intake only; sub-Requests inherit from Initiative context (its Source lives on Initiative itself, not duplicated).
 - **Do not generate candidates before user approves strategy.** Strategy gate is load-bearing.
 
 ## Principles Summary

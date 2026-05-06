@@ -1,6 +1,6 @@
 ---
 name: write-sdlc-spec
-description: Writes an executable Spec document in Notion "Specs" DB through interactive Q&A, linked to a parent Request in "Requests" DB. Handles 4 Request 유형 (기능 에러 / 기능 추가 / 기능 변경 / 기능 개선), each with its own template-driven Q&A flow that forces substantive writing (sentence stems, good/bad examples, self-checks). Reads the user's codebase (via ~/.datamktkorea/code.json) before writing so the Spec contains real file:line references, not generic text. Use when the user says "스펙 써줘", "write spec", "기능 추가 명세 작성", "버그 수정 스펙", "이 요청 Spec으로 만들어줘", or wants to turn a Request into an agent-ready implementation spec. Do NOT use for Initiative-level bets (use write-sdlc-trigger for those) or for non-development requests (지원 요청, 행정 요청).
+description: Writes an executable Spec document in Notion "Specs" DB through interactive Q&A, linked to a parent Request in "Requests" DB. Handles 4 Request 유형 (기능 에러 / 기능 추가 / 기능 변경 / 기능 개선), each with its own template-driven Q&A flow that forces substantive writing (sentence stems, good/bad examples, self-checks). Reads the user's codebase (via ~/.datamktkorea/code.json) before writing so the Spec contains real file:line references, not generic text. Use when the user says "스펙 써줘", "write spec", "기능 추가 명세 작성", "버그 수정 스펙", "이 요청 Spec으로 만들어줘", or wants to turn a Request into an agent-ready implementation spec. Do NOT use for Initiative-level bets (use write-sdlc-initiative for those) or for non-development requests (지원 요청, 행정 요청).
 ---
 
 # Write SDLC Spec
@@ -17,7 +17,7 @@ The deliverable is a new page in Notion **Specs DB** linked to a parent Request,
 
 ## When NOT to Use
 
-- Initiative-level bet (2–6 weeks, strategic) → use **write-sdlc-trigger**.
+- Initiative-level bet (2–6 weeks, strategic) → use **write-sdlc-initiative**.
 - Request 유형 is 지원 요청 / 행정 요청 / 리서치 요청 → not development work, handle separately.
 - Request 유형 is 기능 배포 → should not exist (deprecated); if seen, ask user to re-classify the Request.
 

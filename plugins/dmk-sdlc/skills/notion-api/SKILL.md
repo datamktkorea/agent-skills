@@ -7,7 +7,7 @@ description: Read, query, and write Notion pages and databases via the Notion AP
 
 ## Purpose
 
-This skill is the shared Notion API layer for the datamktkorea team. It wraps Notion's REST API (version **2026-03-11**) as a handful of bash + curl scripts so every team member — and every other skill in this plugin — calls Notion the same way. Use it when the user asks you to read a Notion page for context, find a record by title, create or update pages in team databases (Requests, Triggers, Specs, Projects, Memos), or do anything else that hits the Notion API. Prefer invoking these scripts over writing one-off curl calls, because they handle auth, version headers, retries, and config resolution uniformly.
+This skill is the shared Notion API layer for the datamktkorea team. It wraps Notion's REST API (version **2026-03-11**) as a handful of bash + curl scripts so every team member — and every other skill in this plugin — calls Notion the same way. Use it when the user asks you to read a Notion page for context, find a record by title, create or update pages in team databases (Requests, Initiatives, Specs, Projects, Memos), or do anything else that hits the Notion API. Prefer invoking these scripts over writing one-off curl calls, because they handle auth, version headers, retries, and config resolution uniformly.
 
 ## Preconditions
 
@@ -146,7 +146,7 @@ query-db.sh requests_db --filter '{"property":"이름","title":{"contains":"API 
   | xargs -I {} fetch-page.sh {} --markdown-only
 ```
 
-### Create a Trigger page linked to an existing Request
+### Create an Initiative page linked to an existing Request
 
 `Triggers DB.Requests DB` is a relation property; set it to the Request's page ID:
 
@@ -155,7 +155,7 @@ REQUEST_ID=abc123...
 create-page.sh \
   --parent triggers_db \
   --properties "$(jq -n --arg rid "$REQUEST_ID" '{
-    "이름":      {"title":[{"text":{"content":"Trigger for API auth"}}]},
+    "이름":      {"title":[{"text":{"content":"Initiative for API auth"}}]},
     "Requests DB": {"relation":[{"id":$rid}]},
     "상태":      {"select":{"name":"대기"}}
   }')" \
@@ -253,7 +253,7 @@ Each entry lists the config key → title → `data_source_id`, then every prope
 - 생성자 [created_by]
 - 최신 수정자 [last_edited_by]
 
-### `triggers_db` → Triggers
+### `triggers_db` → Initiatives
 
 `data_source_id: 33fcd014-3f6e-8092-a585-000b407693e7`
 

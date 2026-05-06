@@ -1,11 +1,11 @@
 ---
-name: write-sdlc-trigger
-description: Writes a 트리거(Initiative) document in Notion "Triggers" DB through interactive Q&A. Conducts section-by-section dialogue with the user following a 7-section bet structure: TL;DR, Problem, DIBB, Fat Marker Sketch, Appetite, Rabbit Holes/No-gos, Success/Kill Criteria. Each section has sentence stems, good/bad examples, and self-check questions that structurally prevent vague or performative writing ("AI will be useful" is literally unwriteable here). Use when the user says "이니셔티브 써줘", "트리거 작성", "write trigger", "write initiative", "베팅 문서 만들자", or wants to document a large bet that requires 2–6 weeks of team time. Do NOT use for small feature additions, bug fixes, or chores: those are Specs, not Triggers.
+name: write-sdlc-initiative
+description: Writes a 이니셔티브 document in Notion "Triggers" DB through interactive Q&A. Conducts section-by-section dialogue with the user following a 7-section bet structure: TL;DR, Problem, DIBB, Fat Marker Sketch, Appetite, Rabbit Holes/No-gos, Success/Kill Criteria. Each section has sentence stems, good/bad examples, and self-check questions that structurally prevent vague or performative writing ("AI will be useful" is literally unwriteable here). Use when the user says "이니셔티브 써줘", "이니셔티브 작성", "write initiative", "베팅 문서 만들자", or wants to document a large bet that requires 2–6 weeks of team time. Do NOT use for small feature additions, bug fixes, or chores: those are Specs, not Initiatives.
 ---
 
-# Write Trigger Document
+# Write Initiative Document
 
-A 트리거(Initiative) is a **bet**, not a spec. It asks the team to stake 2–6 weeks on a specific hypothesis about a specific user's problem. This skill forces substantive writing by making generic claims (e.g., "AI will be useful") structurally unwriteable.
+A 이니셔티브 is a **bet**, not a spec. It asks the team to stake 2–6 weeks on a specific hypothesis about a specific user's problem. This skill forces substantive writing by making generic claims (e.g., "AI will be useful") structurally unwriteable.
 
 The deliverable is a new page in Notion **Triggers DB** with all 7 sections filled, linked to a Project and (optionally) a parent Request.
 
@@ -13,7 +13,7 @@ The deliverable is a new page in Notion **Triggers DB** with all 7 sections fill
 
 - User wants to document a strategic/large bet that spans 2–6 weeks.
 - User has a Request in Notion Requests DB that looks big enough to need Initiative-level framing.
-- User says "이니셔티브 써줘", "트리거 문서 만들자", "큰 건 하나 기획해야 해", "write trigger", "write initiative".
+- User says "이니셔티브 써줘", "이니셔티브 문서 만들자", "큰 건 하나 기획해야 해", "write initiative", "write initiative".
 
 ## When NOT to Use
 
@@ -56,7 +56,7 @@ If the user writes something that fails self-check, **do not advance**. Push bac
 
 ### Note on examples
 
-Every concrete identifier in this skill's Good/Bad examples (user names, company names, domain terms like "치과"·"미소 병원"·"김영희 실장", metrics, team members like "@김개발") is illustrative only — drawn from a single running example (dental-clinic chart automation) for clarity. When running the skill, never copy these identifiers into the user-facing prompt or the Trigger body. Substitute real values from the user's context.
+Every concrete identifier in this skill's Good/Bad examples (user names, company names, domain terms like "치과"·"미소 병원"·"김영희 실장", metrics, team members like "@김개발") is illustrative only — drawn from a single running example (dental-clinic chart automation) for clarity. When running the skill, never copy these identifiers into the user-facing prompt or the Initiative body. Substitute real values from the user's context.
 
 ## Workflow Overview
 
@@ -78,7 +78,7 @@ Every concrete identifier in this skill's Good/Bad examples (user names, company
 
 Ask:
 
-> "이 트리거가 Notion Requests DB의 기존 요청에 연결되나요?  
+> "이 이니셔티브가 Notion Requests DB의 기존 요청에 연결되나요?  
 > (a) 네: **페이지 제목 또는 URL**을 알려주세요  
 > (b) 아니요: 새로 시작하겠습니다"
 
@@ -99,7 +99,7 @@ If (a):
   ```
   `.results[]`에서 title (`.properties["이름"].title[0].plain_text`), 유형 (`.properties["유형"].select.name`), 생성 일시를 보여주고 번호로 선택받습니다.
 
-- 어느 경로든: Request의 `id`를 저장 (이후 새 Trigger의 `Requests DB` relation 값이 됨).
+- 어느 경로든: Request의 `id`를 저장 (이후 새 Initiative의 `Requests DB` relation 값이 됨).
 
 If (b):
 
@@ -521,7 +521,7 @@ Format:
 
 After successful write, respond:
 
-> "트리거 생성 완료: [페이지 제목]
+> "이니셔티브 생성 완료: [페이지 제목]
 > URL: [Notion 페이지 URL]
 >
 > 다음 단계:
