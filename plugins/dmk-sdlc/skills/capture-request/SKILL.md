@@ -1,5 +1,5 @@
 ---
-name: task-writer
+name: capture-request
 description: Writes a new Request page in Notion's Requests DB from a free-form description, sizing the body to match the actual work. Use when the user wants to formalize a 업무 지시 / 티켓 / 작업 요청 / hand-off — including "업무 지시 써줘", "티켓 작성해줘", "task 만들어줘". Also trigger when the user describes a task to delegate without explicitly asking for a document. Do NOT use for 2–6주 strategic bets (`write-sdlc-trigger`), implementation specs (`write-sdlc-spec`), or meeting notes (`write-meeting-notes`).
 ---
 

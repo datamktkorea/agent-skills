@@ -47,7 +47,7 @@ brew install jq
 ### `dmk-sdlc` — 소프트웨어 개발 라이프사이클과 지식 작업 자동화
 
 - **notion-api** — 노션 API(2026-03-11) curl 래퍼. 다른 스킬의 공용 레이어
-- **task-writer** — Notion Requests DB에 태스크 작성 (간결/보통/상세 티어 자동 판단, 검토 흡수)
+- **capture-request** — Notion Requests DB에 태스크 작성 (간결/보통/상세 티어 자동 판단, 검토 흡수)
 - **write-sdlc-trigger** — 요청 기반 트리거 페이지 작성
 - **write-sdlc-spec** — 트리거 기반 스펙 페이지 작성
 - **decompose-sdlc-trigger** — 트리거를 하위 요청으로 분해
