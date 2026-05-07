@@ -358,11 +358,10 @@ Compose the properties with `jq` and call `create-page.sh`, piping the compiled 
 properties=$(jq -n \
   --arg title "<generated title>" \
   --arg req "<request_id>" \
-  --arg proj "<project_id>" \
   '{
     "이름":        {"title":[{"text":{"content":$title}}]},
     "Requests DB": {"relation":[{"id":$req}]},
-    "Projects DB": {"relation":[{"id":$proj}]}
+    "상태":        {"status":{"name":"작성"}}
   }')
 
 create-page.sh --parent specs_db --properties "$properties" --markdown - <<'EOF'
@@ -370,7 +369,9 @@ create-page.sh --parent specs_db --properties "$properties" --markdown - <<'EOF'
 EOF
 ```
 
-Do NOT set `유형` or `우선순위` directly: these are rollups from the Request and populate automatically via the `Requests DB` relation.
+Do NOT set `유형`, `우선순위`, or `프로젝트` directly: these are rollups derived from the parent Request via the `Requests DB` relation. Spec→Project is *not* a direct relation in this schema — it is reached through Request.
+
+`상태=작성` marks the Spec as authored but not yet under implementation. The `start-spec-implementation` skill transitions it to `구현중` when a coding session opens; `record-spec-pr` (follow-up skill) transitions to `완료` when a PR is merged.
 
 ### 4.3 Update Request status
 
