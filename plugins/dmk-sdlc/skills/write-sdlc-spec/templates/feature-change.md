@@ -1,7 +1,7 @@
 ---
 category: feature-change
 handles_request_type: 기능 변경
-section_count: 8
+section_count: 9
 ---
 
 # Template: 기능 변경 (Feature Change Spec)
@@ -22,6 +22,7 @@ A feature-change is comparative (AS-IS vs TO-BE) with migration concerns. This i
 6. Breaking 분류 및 롤아웃 (Classification & Rollout)
 7. 롤백 플랜 (Rollback Plan)
 8. 검증 커맨드 (Verification: FAIL→PASS / KEEP-PASSING / MIGRATED)
+9. 관련 Steering 섹션 (Steering Sections to Read)
 
 ## Section 1: 변경 한 줄
 
@@ -387,6 +388,51 @@ TO-BE:
 
 **Length:** FAIL→PASS 2~4개, KEEP-PASSING 2~5개, MIGRATED 2~6개.
 
+## Section 9: 관련 Steering 섹션 (Steering Sections to Read)
+
+**이 섹션의 역할:** 본 Spec 구현 시 *반드시 함께 읽어야 할* Project Steering 본문의 섹션을 지정한다. `start-spec-implementation` 스킬이 이 목록을 파싱하여 코딩 세션 컨텍스트에 그 섹션들만 주입한다 (Steering 본문 전체 주입 X — context bloat 방지). 본 Spec의 forcing function 중 하나: 작성자가 *이 변경이 어떤 invariant를 건드리는지* 의식적으로 명시.
+
+**Ask (stem):**
+
+> "이 Spec이 *건드리는* 결정 영역에 해당하는 Project Steering 섹션 헤딩을 1~5개 bullet으로 적어주세요. Steering 본문에 적힌 섹션 헤딩을 *그대로* 인용하세요 (start-spec-implementation이 정확 일치로 추출).
+>
+> 분기·도메인 무관 거의 항상 포함 권장: `Domain Glossary`, `Business Rules`.
+> 권한·롤이 관련되면: `Permissions & Role Model`.
+> 데이터 격리·테넌시가 관련되면: `Multi-tenancy & Data Isolation`.
+> 가격 게이팅이 관련되면: `Monetization Rules & Access Tiers`.
+> 외부 시스템 연동이 관련되면: `External Interfaces & Dependencies`.
+> 컴플라이언스가 관련되면: `Audit / Logging / Compliance`.
+> i18n 결정이 관련되면: `i18n / l10n Invariants`."
+
+**Good example:**
+
+> - Domain Glossary
+> - Business Rules
+> - Permissions & Role Model
+
+**Bad example:**
+
+> - 모두 / Steering 전체
+
+(전체 주입은 컨텍스트 노이즈를 만들고 본 섹션의 forcing function을 무력화한다.)
+
+**Self-check:**
+
+- [ ] 1개 이상 5개 이하인가
+- [ ] Steering 본문의 *실제 섹션 헤딩*과 정확히 일치하는가 (typo 없이 그대로)
+- [ ] 본 Spec이 *건드리는* 영역만 골랐는가 (over-selection 금지)
+- [ ] 변경(Change)인 만큼 `Resolved Architectural Assumptions`도 검토했는가 (변경이 invariant를 건드리는지)
+
+**Pushback probes:**
+
+- "5개를 넘으면 forcing function이 무력화돼요. 본 Spec이 *직접* 건드리는 것만 추려주세요."
+- "헤딩이 정확히 일치하지 않으면 start-spec-implementation이 fetch를 못해요. Steering 본문에서 복사·붙여넣기 권장."
+- "기존 동작을 *변경*하는 Spec이면 그 변경이 Steering의 어떤 invariant를 흔드는지 한 번 확인하세요. 흔든다면 Initiative 레이어로 escalate."
+
+**Length:** 1~5 bullets.
+
+**Grounding:** Project DB 페이지 본문(Steering)의 섹션 헤딩을 직접 인용.
+
 ## Final Body Format (Notion 쓰기용)
 
 ````markdown
@@ -473,6 +519,11 @@ TO-BE:
 **MIGRATED:**
 
 - <AS-IS test> → <TO-BE test / 제거>
+
+## 9. 관련 Steering 섹션
+
+- <Steering section heading>
+- <Steering section heading>
 
 ```
 

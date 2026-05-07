@@ -1,7 +1,7 @@
 ---
 category: feature-improve
 handles_request_type: 기능 개선
-section_count: 6
+section_count: 7
 ---
 
 # Template: 기능 개선 (Feature Improvement Spec)
@@ -20,6 +20,7 @@ A feature-improvement is metric-bound ("X from A to B"). The baseline-target axi
 4. 개선 메커니즘 및 예측 효과 (Mechanism & Expected Impact)
 5. Guardrail Metrics (부작용 방지 지표)
 6. 검증 및 측정 방법 (Verification & Measurement)
+7. 관련 Steering 섹션 (Steering Sections to Read)
 
 ## Section 1: 개선 한 줄 ("X from A to B")
 
@@ -275,6 +276,50 @@ A feature-improvement is metric-bound ("X from A to B"). The baseline-target axi
 
 **Length:** 4~6줄.
 
+## Section 7: 관련 Steering 섹션 (Steering Sections to Read)
+
+**이 섹션의 역할:** 본 Spec 구현 시 *반드시 함께 읽어야 할* Project Steering 본문의 섹션을 지정한다. `start-spec-implementation` 스킬이 이 목록을 파싱하여 코딩 세션 컨텍스트에 그 섹션들만 주입한다 (Steering 본문 전체 주입 X — context bloat 방지). 본 Spec의 forcing function 중 하나: 작성자가 *이 변경이 어떤 invariant를 건드리는지* 의식적으로 명시.
+
+**Ask (stem):**
+
+> "이 Spec이 *건드리는* 결정 영역에 해당하는 Project Steering 섹션 헤딩을 1~5개 bullet으로 적어주세요. Steering 본문에 적힌 섹션 헤딩을 *그대로* 인용하세요 (start-spec-implementation이 정확 일치로 추출).
+>
+> 분기·도메인 무관 거의 항상 포함 권장: `Domain Glossary`, `Business Rules`.
+> 권한·롤이 관련되면: `Permissions & Role Model`.
+> 데이터 격리·테넌시가 관련되면: `Multi-tenancy & Data Isolation`.
+> 가격 게이팅이 관련되면: `Monetization Rules & Access Tiers`.
+> 외부 시스템 연동이 관련되면: `External Interfaces & Dependencies`.
+> 컴플라이언스가 관련되면: `Audit / Logging / Compliance`.
+> i18n 결정이 관련되면: `i18n / l10n Invariants`."
+
+**Good example:**
+
+> - Domain Glossary
+> - External Interfaces & Dependencies
+
+**Bad example:**
+
+> - 모두 / Steering 전체
+
+(전체 주입은 컨텍스트 노이즈를 만들고 본 섹션의 forcing function을 무력화한다.)
+
+**Self-check:**
+
+- [ ] 1개 이상 5개 이하인가
+- [ ] Steering 본문의 *실제 섹션 헤딩*과 정확히 일치하는가 (typo 없이 그대로)
+- [ ] 본 Spec(개선)이 *건드리는* 영역만 골랐는가
+- [ ] 성능 개선이 외부 시스템·SLA에 의존하면 `External Interfaces & Dependencies` 포함했는가
+
+**Pushback probes:**
+
+- "5개를 넘으면 forcing function이 무력화돼요. 본 Spec이 *직접* 건드리는 것만 추려주세요."
+- "헤딩이 정확히 일치하지 않으면 start-spec-implementation이 fetch를 못해요. Steering 본문에서 복사·붙여넣기 권장."
+- "개선이 invariant(예: 가용성 SLA)에 영향을 줄 가능성이 있다면 그 섹션을 포함하세요."
+
+**Length:** 1~5 bullets.
+
+**Grounding:** Project DB 페이지 본문(Steering)의 섹션 헤딩을 직접 인용.
+
 ## Final Body Format (Notion 쓰기용)
 
 ```markdown
@@ -326,4 +371,9 @@ A feature-improvement is metric-bound ("X from A to B"). The baseline-target axi
   - 달성: <...>
   - 부분 달성: <...>
   - 실패: <...>
+
+## 7. 관련 Steering 섹션
+
+- <Steering section heading>
+- <Steering section heading>
 ```
