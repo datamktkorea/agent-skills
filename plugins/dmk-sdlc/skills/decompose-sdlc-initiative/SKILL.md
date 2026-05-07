@@ -106,7 +106,7 @@ fetch-page-properties.sh "<initiative-url-or-id>"
 fetch-page.sh "<initiative-url-or-id>" --markdown-only
 ```
 
-If the user gave a keyword, search Triggers DB by title:
+If the user gave a keyword, search the Initiatives DB by title:
 
 ```bash
 query-db.sh triggers_db --page-size 5 \
@@ -141,10 +141,10 @@ Query Requests DB with a server-side relation filter pointing at this Initiative
 
 ```bash
 query-db.sh requests_db --page-size 25 \
-  --filter "$(jq -n --arg tid "<parent-initiative-id>" '{property:"Triggers DB", relation:{contains:$tid}}')"
+  --filter "$(jq -n --arg tid "<parent-initiative-id>" '{property:"Initiatives DB", relation:{contains:$tid}}')"
 ```
 
-No client-side filtering needed — the API returns only Requests whose `Triggers DB` relation contains the parent.
+No client-side filtering needed — the API returns only Requests whose `Initiatives DB` relation contains the parent.
 
 If existing children found, surface:
 
@@ -416,12 +416,12 @@ for cand_json in "${candidates[@]}"; do
     --arg title "$title" --arg type "$type" --arg priority "$priority" \
     --arg tid "<parent-initiative-id>" --arg pid "<project-id>" \
     '{
-      "이름":        {"title":[{"text":{"content":$title}}]},
-      "유형":        {"select":{"name":$type}},
-      "카테고리":    {"select":{"name":"개발"}},
-      "우선순위":    {"select":{"name":$priority}},
-      "Triggers DB": {"relation":[{"id":$tid}]},
-      "Projects DB": {"relation":[{"id":$pid}]}
+      "이름":           {"title":[{"text":{"content":$title}}]},
+      "유형":           {"select":{"name":$type}},
+      "카테고리":       {"select":{"name":"개발"}},
+      "우선순위":       {"select":{"name":$priority}},
+      "Initiatives DB": {"relation":[{"id":$tid}]},
+      "Projects DB":    {"relation":[{"id":$pid}]}
     }')
 
   if resp=$(create-page.sh --parent requests_db --properties "$properties" --markdown - <<<"$body" 2>/dev/null); then
@@ -432,7 +432,7 @@ for cand_json in "${candidates[@]}"; do
 done
 ```
 
-Do NOT set `상태` explicitly: it defaults to "미할당" automatically when 담당자 is empty. The child-request relation key is `Triggers DB` (not `이니셔티브`) per the `requests_db` schema in `notion-api/SKILL.md`.
+Do NOT set `상태` explicitly: it defaults to "미할당" automatically when 담당자 is empty. The child-request relation key is `Initiatives DB` per the `requests_db` schema in `notion-api/SKILL.md`.
 
 ### 4.3 Partial-failure handling
 

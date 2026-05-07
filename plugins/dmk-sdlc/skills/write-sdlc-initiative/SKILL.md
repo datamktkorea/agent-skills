@@ -7,7 +7,7 @@ description: Writes a 이니셔티브 document in Notion "Triggers" DB through i
 
 A 이니셔티브 is a **bet**, not a spec. It asks the team to stake 2–6 weeks on a specific hypothesis about a specific user's problem. This skill forces substantive writing by making generic claims (e.g., "AI will be useful") structurally unwriteable.
 
-The deliverable is a new page in Notion **Triggers DB** with all 7 sections filled, linked to a Project and (optionally) a parent Request.
+The deliverable is a new page in Notion **Initiatives DB** (config key `triggers_db`) with all 7 sections filled, linked to a Project and (optionally) a parent Request.
 
 ## When to Use
 
@@ -418,7 +418,7 @@ No-gos:
 
 Before writing, show the compiled body back to the user as a preview:
 
-> "작성 완료. 아래 내용으로 Notion Triggers DB에 저장할게요. 수정할 부분 있으면 말씀해주세요."
+> "작성 완료. 아래 내용으로 Notion Initiatives DB에 저장할게요. 수정할 부분 있으면 말씀해주세요."
 
 Show a summary: title + 출처 + 허용 기간 + 우선순위 + 요약 (Phase 1 내용) + section count with any incomplete sections flagged.
 
