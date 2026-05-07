@@ -48,9 +48,11 @@ brew install jq
 
 - **notion-api** — 노션 API(2026-03-11) curl 래퍼. 다른 스킬의 공용 레이어
 - **capture-request** — Notion Requests DB에 태스크 작성 (간결/보통/상세 티어 자동 판단, 검토 흡수)
+- **write-project-steering** — 프로젝트 SSOT 작성 (제품·수탁·공공 분기 / 비전·비즈니스 규칙·도메인 용어집 등 invariants)
 - **write-sdlc-initiative** — 요청 기반 이니셔티브 페이지 작성
-- **write-sdlc-spec** — 이니셔티브 기반 스펙 페이지 작성
 - **decompose-sdlc-initiative** — 이니셔티브를 하위 요청으로 분해
+- **write-sdlc-spec** — 요청 기반 스펙 페이지 작성 (관련 Steering 섹션 명시 강제)
+- **start-spec-implementation** — Spec URL 입력 → Spec/Request/Initiative/Project Steering/Repo Steering 컨텍스트 일괄 로드 + Spec 상태 `구현중` 전이
 - **write-meeting-notes** — 회의록 작성 및 노션 업로드
 
 ### `dmk-stack` — 기술 스택별 엔지니어링 플레이북과 코드 리뷰 가이드
