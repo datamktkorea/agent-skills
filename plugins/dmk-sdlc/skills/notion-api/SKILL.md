@@ -148,7 +148,7 @@ query-db.sh requests_db --filter '{"property":"이름","title":{"contains":"API 
 
 ### Create an Initiative page linked to an existing Request
 
-`Triggers DB.Requests DB` is a relation property; set it to the Request's page ID:
+`triggers_db.Requests DB` is a relation property; set it to the Request's page ID:
 
 ```bash
 REQUEST_ID=abc123...
@@ -157,7 +157,7 @@ create-page.sh \
   --properties "$(jq -n --arg rid "$REQUEST_ID" '{
     "이름":      {"title":[{"text":{"content":"Initiative for API auth"}}]},
     "Requests DB": {"relation":[{"id":$rid}]},
-    "상태":      {"select":{"name":"대기"}}
+    "상태":      {"status":{"name":"작성"}}
   }')" \
   --markdown-text "# Background\n\n..."
 ```
@@ -218,15 +218,15 @@ Each entry lists the config key → title → `data_source_id`, then every prope
 `data_source_id: 33ecd014-3f6e-80c0-b177-000b3e08ac88`
 
 - 이름 [title]
-- 상태 [status]
+- 상태 [status] — options: `미할당` (to_do) / `할당` (in_progress) / `해결`, `반려` (complete)
 - 우선순위 [select]
 - 카테고리 [select]
-- 유형 [select]
+- 유형 [select] — options: 기능 에러 / 기능 추가 / 기능 변경 / 기능 개선 / 리서치 요청 / 지원 요청 / 행정 요청
 - 작업 기간 [date]
 - 요청자 [people]
 - 담당자 [people]
-- Triggers DB [relation] → `triggers_db`
-- Projects DB [relation] → `projects_db`
+- Initiatives DB [relation] → `triggers_db` (parent Initiative; cardinality 0~1)
+- Projects DB [relation] → `projects_db` (cardinality 1)
 - 프로젝트 현황 [rollup]
 - 프로젝트 별칭 [rollup]
 - 생성 일시 [created_time]
@@ -255,21 +255,23 @@ Each entry lists the config key → title → `data_source_id`, then every prope
 
 ### `triggers_db` → Initiatives
 
+> Note on the config key: the `triggers_db` key remains for now (codebase identifier sync is a follow-up task). The Notion-side title is `Initiatives`. All scripts/skills reference this DB via the `triggers_db` config key.
+
 `data_source_id: 33fcd014-3f6e-8092-a585-000b407693e7`
 
 - 이름 [title]
-- 상태 [select]
-- 유형 [select]
-- 우선순위 [select]
-- 출처 [select]
-- 허용 기간 [select]
+- 상태 [status] — options: `작성` (to_do) / `구현중` (in_progress) / `해결`, `반려` (complete)
+- 유형 [select] — options: Fix / Build / Improve / Strategy
+- 우선순위 [select] — options: P0 / P1 / P2 / P3
+- 출처 [select] — options: Strategic / Customer / Ops / Product
+- 허용 기간 [select] — options: 1 Week / 2 Weeks / 6 Weeks / 3 Months / 6+ Months
 - 담당자 [formula]
 - 담당자(숨김) [rollup]
 - 프로젝트명 [rollup]
 - 요청일시 [rollup]
 - Requests DB [relation] → `requests_db`
-- Projects DB [relation] → `projects_db`
-- 후속 트리거 [relation] → `triggers_db`
+- Projects DB [relation] → `projects_db` (cardinality 1)
+- 후속 이니셔티브 [relation] → `triggers_db` (self-relation, successor sequence)
 - 생성 일시 [created_time]
 - 최종 편집 일시 [last_edited_time]
 - 생성자 [created_by]
@@ -280,15 +282,19 @@ Each entry lists the config key → title → `data_source_id`, then every prope
 `data_source_id: 33fcd014-3f6e-80d9-9ad9-000b760cd632`
 
 - 이름 [title]
+- 상태 [status] — options: `작성` (to_do) / `구현중` (in_progress) / `완료` (complete)
+- PR URL [url]
 - 담당자 [formula]
-- 우선순위 [rollup]
-- 유형 [rollup]
-- Requests DB [relation] → `requests_db`
-- Projects DB [relation] → `projects_db`
+- 우선순위 [rollup, from `Requests DB → 우선순위`]
+- 유형 [rollup, from `Requests DB → 유형`]
+- 프로젝트 [rollup, from `Requests DB → Projects DB → 프로젝트명`]
+- Requests DB [relation] → `requests_db` (parent Request; cardinality 1)
 - 생성 일시 [created_time]
 - 최종 편집 일시 [last_edited_time]
 - 생성자 [created_by]
 - 최종 편집자 [last_edited_by]
+
+> Spec→Project은 항상 Request 경유 (직접 relation 없음). Project Steering 본문에 도달하려면 `Spec.Requests DB[0]` → Request 페이지 → `Request.Projects DB[0]` → Project 페이지를 fetch한다.
 
 ### `meetings_db` → Meeting
 
