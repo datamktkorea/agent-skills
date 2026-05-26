@@ -42,6 +42,7 @@ brew install jq
 - **git-commit** — Conventional Commits + Gitmoji 커밋 메시지 작성
 - **git-pull-request** — PR 제목/본문 자동 생성
 - **format-code-comments** — TS/Python에 한국어 주석·docstring 자동 작성
+- **format-and-commit** — format-code-comments → git-commit 순차 실행 (PR 직전 한 번에 처리)
 
 ### `dmk-sdlc` — 소프트웨어 개발 라이프사이클과 지식 작업 자동화
 
