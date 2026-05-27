@@ -92,11 +92,19 @@ Present the full plan before touching any file.
 | 4   | `get_user_by_email()` | Docstring | Add    | 이메일로 사용자를 조회하고... |
 
 총 X개 파일, Y개 주석 변경 예정입니다.
-진행할까요? 특정 항목만 제외하고 싶으면 번호로 알려주세요.
 
 ---
 
-If the user approves, proceed to Step 6. If they request changes, adjust the plan and re-present before writing.
+After printing the plan table, ask for approval with the **AskUserQuestion** tool (not a free-text prompt) so the user can pick instead of typing. Use a single question shaped like this:
+
+- `header`: `주석 적용`
+- `question`: `총 {file_count}개 파일, {comment_count}개 주석을 적용할까요?`
+- options:
+  - `전체 적용` — 계획의 모든 항목을 적용
+  - `일부 제외하고 적용` — 제외할 번호를 알려주면 그 항목만 빼고 적용
+  - `취소` — 아무 파일도 수정하지 않음
+
+If the user picks **전체 적용**, proceed to Step 6. If **일부 제외하고 적용**, the user names the excluded numbers (via the option's note or a follow-up); drop those, re-print the trimmed plan, and continue. If **취소**, stop without touching any file.
 
 ### Step 6: Apply Comments
 

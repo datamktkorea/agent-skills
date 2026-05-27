@@ -13,7 +13,7 @@ Runs two existing skills back-to-back so the user doesn't invoke them separately
 
 2. **Stage 1 — `dmk-oneteam:format-code-comments`.** Invoke via the Skill tool, passing the base branch and scope. Let it run its full approval-and-write flow untouched.
 
-3. **Gate.** Show `git diff --stat`, then ask: `주석 추가 완료. 커밋을 진행할까요? (진행 / 직접 수정 후 진행 / 종료)`. On "종료", stop without rolling back the formatting.
+3. **Gate.** Show `git diff --stat`, then ask for the next step with the **AskUserQuestion** tool (not a free-text prompt) — `header`: `커밋 진행`, `question`: `주석 추가 완료. 커밋을 진행할까요?`, options: `진행` (바로 커밋), `직접 수정 후 진행` (사용자가 추가 수정 후 알려주면 계속), `종료` (포맷은 그대로 두고 중단). On `종료`, stop without rolling back the formatting.
 
 4. **Stage 2 — `dmk-oneteam:git-commit`.** Invoke via the Skill tool. It owns staging, message drafting, and the commit under its own rules. Suggest grouping the formatted files together, but never pre-stage anything yourself.
 
