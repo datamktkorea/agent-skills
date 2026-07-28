@@ -85,10 +85,10 @@ The section headers below are the team's issue format and stay in Korean — rep
 
 ## Output (filing procedure)
 
-1. **Duplicate check (mandatory, before filing)** — look for an existing issue with the same component / root cause (file:line).
+1. **Duplicate check (mandatory, before filing)** — look for an existing issue with the same component / root cause (file:line). Run it against the **fix repo**, not whatever repo you happen to be standing in.
 
    ```bash
-   gh issue list --state all --limit 100 --search "<핵심 키워드/파일명>"
+   gh issue list --repo <owner/repo> --state all --limit 200 --search "<핵심 키워드/파일명>"
    ```
 
    - If it already exists, **do not create a new one** — report the existing issue number (add a supplementary comment if needed). Compare at file:line granularity.
@@ -96,20 +96,28 @@ The section headers below are the team's issue format and stay in Korean — rep
 
 2. Draft the body with the template above.
 3. **Filing location = fix repo** — file the issue on **the repo where the fix happens** (its implementation, PR, review, and CODEOWNERS all live there). If the fix spans multiple repos, file on the primary fix repo and name the rest in the body. If a series/epic tracker issue exists, link it.
-4. **Assign a title sequence number** — max existing `#N` in **that fix repo** + 1 (a manual sequence, separate from GitHub's auto issue number). If that repo has no `#N` series yet, **start a new series at `#1`**:
+4. **Assign a title sequence number** — max existing `#N` in **that fix repo** + 1 (a manual sequence, separate from GitHub's auto issue number). Scan **all** issues, not just the recent page: an old issue can hold the highest `#N`. `--limit` is what makes `gh` paginate, so set it above the repo's total issue count. The `// 0` fallback makes an empty result **start a new series at `#1`**.
 
    ```bash
-   gh issue list --repo <owner/repo> --state all --limit 100 --json title \
-     --jq '[.[]|select(.title|test("^#[0-9]+"))|(.title|capture("^#(?<n>[0-9]+)").n|tonumber)]|max'
+   gh issue list --repo <owner/repo> --state all --limit 1000 --json title \
+     --jq '[.[]|select(.title|test("^#[0-9]+"))|(.title|capture("^#(?<n>[0-9]+)").n|tonumber)]|(max // 0)+1'
    ```
 
-5. Create:
+5. **Pre-create self-check** — the draft must contain no leftovers from the template. Any hit here is a blocker; resolve it before creating.
 
    ```bash
-   gh issue create --title "#N. [P?] <요약>" --body-file <초안.md>
+   grep -nE '<[^>]+>|⏳/✅|XS / S / M / L|~MM/DD' <초안.md>
    ```
 
-6. If there are dependencies, state `Blocked by #N` in the body/comment to wire up the tracker link.
+   Then confirm every required section is present: 재현 시나리오 / 증상 / 원인 / 수정 방향 / 검증 상태 / 검증 방법 / 메타 — and that 원인 carries a real `file:line` and 의존관계 is non-blank.
+
+6. Create. **Re-run step 4 immediately before this command** — someone may have filed a `#N` since you computed it; if the max moved, take the new number.
+
+   ```bash
+   gh issue create --repo <owner/repo> --title "#N. [P?] <요약>" --body-file <초안.md>
+   ```
+
+7. If there are dependencies, state `Blocked by #N` in the body/comment to wire up the tracker link.
 
 ## Good example (illustrative — Python/FastAPI backend, issue #280, P1)
 
