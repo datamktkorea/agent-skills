@@ -96,10 +96,13 @@ The section headers below are the team's issue format and stay in Korean — rep
 
 2. Draft the body with the template above.
 3. **Filing location = fix repo** — file the issue on **the repo where the fix happens** (its implementation, PR, review, and CODEOWNERS all live there). If the fix spans multiple repos, file on the primary fix repo and name the rest in the body. If a series/epic tracker issue exists, link it.
-4. **Assign a title sequence number** — max existing `#N` in **that fix repo** + 1 (a manual sequence, separate from GitHub's auto issue number). Scan **all** issues, not just the recent page: an old issue can hold the highest `#N`. `--limit` is what makes `gh` paginate, so set it above the repo's total issue count. The `// 0` fallback makes an empty result **start a new series at `#1`**.
+4. **Assign a title sequence number** — max existing `#N` in **that fix repo** + 1 (a manual sequence, separate from GitHub's auto issue number). Scan **every** issue, not just the recent page: an old issue can hold the highest `#N`. `--limit` is the only pagination knob (`gh` fetches pages internally until it reaches the limit), so derive it from the repo's actual issue count instead of guessing a number. The `// 0` fallback makes an empty result **start a new series at `#1`**.
 
    ```bash
-   gh issue list --repo <owner/repo> --state all --limit 1000 --json title \
+   REPO=<owner/repo>
+   TOTAL=$(gh api -X GET search/issues -f q="repo:$REPO is:issue" -f per_page=1 --jq '.total_count')
+   [ "$TOTAL" -lt 1 ] && TOTAL=1
+   gh issue list --repo "$REPO" --state all --limit "$TOTAL" --json title \
      --jq '[.[]|select(.title|test("^#[0-9]+"))|(.title|capture("^#(?<n>[0-9]+)").n|tonumber)]|(max // 0)+1'
    ```
 
