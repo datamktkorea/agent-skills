@@ -43,7 +43,7 @@ The section headers below are the team's issue format and stay in Korean — rep
 **원인**
 
 - `<파일 경로>:<라인>` `<함수/심볼>` — `<왜 터지는지>`
-- (필수: 파일+라인/함수까지. 못 특정하면 "여기부터 파야 함"으로 지점이라도 남긴다.)
+- (필수: 파일 + 라인 + 함수/심볼 **세 가지 모두**. 라인은 착수 지점을, 심볼은 그 라인이 편집으로 밀린 뒤에도 남는 앵커를 제공하므로 둘 다 적는다. 못 특정하면 "여기부터 파야 함"으로 지점이라도 남긴다.)
 
 **수정 방향**
 
@@ -65,6 +65,7 @@ The section headers below are the team's issue format and stay in Korean — rep
 
 **메타**
 
+- 대상 레포: `<owner/repo>` (fix 가 일어나는 레포. 여러 레포에 걸치면 주 레포를 먼저 적고 나머지를 함께 나열)
 - 크기: XS / S / M / L
 - 마감: ~MM/DD
 - **의존관계**: Blocked by #`<GitHub 이슈번호>` / Blocks #`<GitHub 이슈번호>` / 독립(병렬 가능) ← 빈칸 금지 (없으면 "독립" 명시)
@@ -147,8 +148,9 @@ Note how the two numbering spaces differ: this issue carries `#280.` in its **ti
 >
 > **원인**
 >
-> - `app/routes/publishing/application/service.py` `_download_public_html`·`_load_cover_images` — `response.raise_for_status()` 가 던지는 `httpx.HTTPStatusError` 미처리
-> - `app/routes/publishing/interface/controller.py` export 핸들러가 `ValueError`/`PdfDependencyError` 만 catch → httpx 예외가 그대로 500 누출
+> - `app/routes/publishing/application/service.py:214` `_download_public_html` — `response.raise_for_status()` 가 던지는 `httpx.HTTPStatusError` 미처리
+> - `app/routes/publishing/application/service.py:263` `_load_cover_images` — 동일 (표지 이미지 경로)
+> - `app/routes/publishing/interface/controller.py:88` `export_book` — `ValueError`/`PdfDependencyError` 만 catch → httpx 예외가 그대로 500 누출
 >
 > **수정 방향**
 >
@@ -172,6 +174,7 @@ Note how the two numbering spaces differ: this issue carries `#280.` in its **ti
 >
 > **메타**
 >
+> - 대상 레포: `example-org/publishing-api`
 > - 크기: S / 마감: ~7/21
 > - 의존관계: 독립(병렬 가능) — 같은 "저장소 실패 처리 부재" 계열
 > - 완료 정의(DoD): 원고/표지 URL 이 죽은 책에서 export 시 500 대신 "몇 장 원고 없음" 안내가 반환되고, 재저장 후 export 정상 성공
