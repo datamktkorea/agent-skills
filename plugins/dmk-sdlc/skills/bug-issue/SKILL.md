@@ -67,9 +67,15 @@ The section headers below are the team's issue format and stay in Korean — rep
 
 - 크기: XS / S / M / L
 - 마감: ~MM/DD
-- **의존관계**: Blocked by #N / Blocks #N / 독립(병렬 가능) ← 빈칸 금지 (없으면 "독립" 명시)
+- **의존관계**: Blocked by #`<GitHub 이슈번호>` / Blocks #`<GitHub 이슈번호>` / 독립(병렬 가능) ← 빈칸 금지 (없으면 "독립" 명시)
 - **완료 정의(DoD)**: `<재현 시나리오가 실제로 해소된 지점 — 그 자체로 데모/검증 가능해야 함>`
-- 관련: #N (같은 계열·맥락)
+- 관련: #`<GitHub 이슈번호>` (같은 계열·맥락)
+
+**Two different `#` numbers — do not mix them.** The `#N.` prefix in the *title* is a hand-maintained
+series counter; the `#` numbers in 의존관계 / 관련 are **GitHub's own issue numbers**. They rarely match:
+an issue titled `#5. [P1] …` can be GitHub issue `#212`. Body references must use the GitHub number —
+that is what GitHub autolinks and what wires up the tracker. Writing the title-series number there
+produces a link that resolves to an unrelated issue while still looking correct.
 
 ## Rules (this is what the skill is worth)
 
@@ -96,7 +102,7 @@ The section headers below are the team's issue format and stay in Korean — rep
 
 2. Draft the body with the template above.
 3. **Filing location = fix repo** — file the issue on **the repo where the fix happens** (its implementation, PR, review, and CODEOWNERS all live there). If the fix spans multiple repos, file on the primary fix repo and name the rest in the body. If a series/epic tracker issue exists, link it.
-4. **Assign a title sequence number** — max existing `#N` in **that fix repo** + 1 (a manual sequence, separate from GitHub's auto issue number). Scan **every** issue, not just the recent page: an old issue can hold the highest `#N`. `--limit` is the only pagination knob (`gh` fetches pages internally until it reaches the limit), so derive it from the repo's actual issue count instead of guessing a number. The `// 0` fallback makes an empty result **start a new series at `#1`**.
+4. **Assign a title sequence number** — max existing title-series `#N` in **that fix repo** + 1. This counter lives **only in the title** and is unrelated to the GitHub issue number the API assigns on creation; never reuse it for body references (see "Two different `#` numbers" above). Scan **every** issue, not just the recent page: an old issue can hold the highest `#N`. `--limit` is the only pagination knob (`gh` fetches pages internally until it reaches the limit), so derive it from the repo's actual issue count instead of guessing a number. The `// 0` fallback makes an empty result **start a new series at `#1`**.
 
    ```bash
    REPO=<owner/repo>
@@ -114,17 +120,21 @@ The section headers below are the team's issue format and stay in Korean — rep
 
    Then confirm every required section is present: 재현 시나리오 / 증상 / 원인 / 수정 방향 / 검증 상태 / 검증 방법 / 메타 — and that 원인 carries a real `file:line` and 의존관계 is non-blank.
 
-6. Create. **Re-run step 4 immediately before this command** — someone may have filed a `#N` since you computed it; if the max moved, take the new number.
+6. Create. **Re-run step 4 immediately before this command** — someone may have filed a title-series `#N` since you computed it; if the max moved, take the new number.
 
    ```bash
    gh issue create --repo <owner/repo> --title "#N. [P?] <요약>" --body-file <초안.md>
    ```
 
-7. If there are dependencies, state `Blocked by #N` in the body/comment to wire up the tracker link.
+   The command prints the URL of the created issue; its trailing number is the **GitHub issue number**, which is what other issues must cite. It will not equal the `#N` you just put in the title.
 
-## Good example (illustrative — Python/FastAPI backend, issue #280, P1)
+7. If there are dependencies, state `Blocked by #<GitHub 이슈번호>` in the body/comment to wire up the tracker link — the blocker's **GitHub** number, read off its URL, not the `#N` in its title.
+
+## Good example (illustrative — Python/FastAPI backend, title series #280, P1)
 
 All identifiers below are illustrative (see "Note on examples"). It shows a fully-formed issue in the team format.
+Note how the two numbering spaces differ: this issue carries `#280.` in its **title** while living at GitHub issue
+`#412`, and its 관련 line cites a **GitHub** number.
 
 > **재현 시나리오**
 > 사용자가 책을 다 만들고 마지막으로 "PDF 다운로드" 클릭 → 챕터 원고 파일 중 하나의 저장소 URL 이 죽어 있으면(재생성으로 위치 변경, 파일 정리, 저장소 일시 장애 등) "서버 오류(500)"만 표시. 원인·해결법을 알 수 없고, 다운로드 실패 시 인쇄로 못 이어져 우회 불가. 데모 마지막 단계에서 막히는 시나리오.
@@ -165,4 +175,4 @@ All identifiers below are illustrative (see "Note on examples"). It shows a full
 > - 크기: S / 마감: ~7/21
 > - 의존관계: 독립(병렬 가능) — 같은 "저장소 실패 처리 부재" 계열
 > - 완료 정의(DoD): 원고/표지 URL 이 죽은 책에서 export 시 500 대신 "몇 장 원고 없음" 안내가 반환되고, 재저장 후 export 정상 성공
-> - 관련: #N (같은 계열, 데모 마지막 단계 직결)
+> - 관련: #405 (같은 계열, 데모 마지막 단계 직결) ← GitHub 이슈번호
