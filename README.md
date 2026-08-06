@@ -41,6 +41,9 @@ Claude Code 플러그인 마켓플레이스 구조라 `/plugin install`은 Claud
 루트의 `skills/`는 각 플러그인의 `plugins/<plugin>/skills/<name>/`를 가리키는 symlink 모음입니다. `npx skills`는 저장소 루트의 정해진 경로(`skills/`, `.claude/skills/` 등)만 스캔하기 때문에, `plugins/` 아래에만 있으면 인식하지 못해 이 symlink 레이어를 추가했습니다.
 
 ```bash
+# 대화형으로 설치할 스킬 선택 (에이전트는 설치된 걸 자동 감지, 실패하면 대화형 선택)
+npx skills add datamktkorea/agent-skills
+
 # 전체 스킬을 한 번에 설치
 npx skills add datamktkorea/agent-skills --skill '*' -a <agent>
 
@@ -48,7 +51,7 @@ npx skills add datamktkorea/agent-skills --skill '*' -a <agent>
 npx skills add datamktkorea/agent-skills --skill git-commit -a <agent>
 ```
 
-`<agent>`는 `codex`, `cursor` 등 설치 대상 에이전트 이름입니다. 기본은 project 스코프(`./<agent>/skills/`)이며 `-g`를 붙이면 global(`~/<agent>/skills/`)에 설치됩니다.
+`-a`(`--agent`)를 안 붙이면 설치된 코딩 에이전트를 자동으로 감지하고, 감지가 안 되면 대화형으로 고르게 합니다. `--skill`도 값 없이 두면(또는 아예 생략하면) 저장소에서 발견된 스킬 목록을 보여주고 체크박스로 골라 설치합니다. `<agent>`에는 `codex`, `cursor` 등 설치 대상 에이전트 이름을 넣습니다. 기본은 project 스코프(`./<agent>/skills/`)이며 `-g`를 붙이면 global(`~/<agent>/skills/`)에 설치됩니다. 설치 전에 뭐가 있는지만 보려면 `--list`.
 
 > 새 스킬을 추가할 때는 `plugins/<plugin>/skills/<name>/` 아래에 만든 뒤, `skills/<name>`에 상대경로 symlink(`ln -s ../plugins/<plugin>/skills/<name> skills/<name>`)를 함께 추가해야 `npx skills`에서 보입니다.
 
