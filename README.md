@@ -34,6 +34,24 @@ brew install jq
 /plugin install dmk-stack@datamktkorea-agent-skills
 ```
 
+## Claude Code 외 다른 에이전트에서 사용하기
+
+Claude Code 플러그인 마켓플레이스 구조라 `/plugin install`은 Claude Code 전용입니다. Codex CLI, Cursor 등 SKILL.md 호환 에이전트에서 쓰려면 [`npx skills`](https://github.com/vercel-labs/skills)로 설치하면 됩니다. 별도 등록/제출 절차는 없습니다 — public 저장소라 바로 됩니다.
+
+루트의 `skills/`는 각 플러그인의 `plugins/<plugin>/skills/<name>/`를 가리키는 symlink 모음입니다. `npx skills`는 저장소 루트의 정해진 경로(`skills/`, `.claude/skills/` 등)만 스캔하기 때문에, `plugins/` 아래에만 있으면 인식하지 못해 이 symlink 레이어를 추가했습니다.
+
+```bash
+# 전체 스킬을 한 번에 설치
+npx skills add datamktkorea/agent-skills --skill '*' -a <agent>
+
+# 특정 스킬만 설치
+npx skills add datamktkorea/agent-skills --skill git-commit -a <agent>
+```
+
+`<agent>`는 `codex`, `cursor` 등 설치 대상 에이전트 이름입니다. 기본은 project 스코프(`./<agent>/skills/`)이며 `-g`를 붙이면 global(`~/<agent>/skills/`)에 설치됩니다.
+
+> 새 스킬을 추가할 때는 `plugins/<plugin>/skills/<name>/` 아래에 만든 뒤, `skills/<name>`에 상대경로 symlink(`ln -s ../plugins/<plugin>/skills/<name> skills/<name>`)를 함께 추가해야 `npx skills`에서 보입니다.
+
 ## Plugins & Skills
 
 ### `dmk-oneteam` — 모든 프로젝트가 함께 쓰는 범용 개발자 툴킷

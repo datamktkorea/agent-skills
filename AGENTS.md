@@ -82,6 +82,7 @@ If multiple plugins share `"source": "./"`, Claude Code treats them as one sourc
 
 1. Place `SKILL.md` under the correct plugin's `skills/` directory.
 2. No path registration needed — Claude Code auto-discovers `SKILL.md` files under each plugin's `source`.
+3. Also symlink it into the root `skills/` directory: `ln -s ../plugins/<plugin-name>/skills/<skill-name> skills/<skill-name>`. This is a separate discovery path for [`npx skills`](https://github.com/vercel-labs/skills) (used by Codex CLI, Cursor, and other SKILL.md-compatible agents outside Claude Code) — it only scans well-known root paths like `skills/`, not `plugins/<plugin>/skills/`. See README's "Claude Code 외 다른 에이전트에서 사용하기" section.
 
 ## Plugin Versioning
 
