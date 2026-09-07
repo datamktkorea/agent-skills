@@ -61,6 +61,7 @@ npx skills add datamktkorea/agent-skills --skill git-commit -a <agent>
 
 - **git-commit** — Conventional Commits + Gitmoji 커밋 메시지 작성
 - **git-pull-request** — PR 제목/본문 자동 생성
+- **changeset** — 저장소 정책과 변경 범위를 확인해 브랜치의 Changeset을 작성·검증
 - **format-code-comments** — TS/Python에 한국어 주석·docstring 자동 작성
 - **format-and-commit** — format-code-comments → git-commit 순차 실행 (PR 직전 한 번에 처리)
 
