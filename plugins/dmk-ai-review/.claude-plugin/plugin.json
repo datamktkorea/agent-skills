@@ -1,6 +1,0 @@
-{
-  "name": "dmk-ai-review",
-  "description": "Independent-perspective agents that audit AI-produced output",
-  "version": "1.0.0",
-  "author": { "name": "datamktkorea", "email": "dmk@datamarketing.co.kr" }
-}

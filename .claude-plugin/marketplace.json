@@ -23,12 +23,6 @@
       "source": "./plugins/dmk-stack",
       "strict": false,
       "description": "Engineering playbooks and code review guides per technical stack"
-    },
-    {
-      "name": "dmk-ai-review",
-      "source": "./plugins/dmk-ai-review",
-      "strict": false,
-      "description": "Independent-perspective agents that audit AI-produced output"
     }
   ]
 }
