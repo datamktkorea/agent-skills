@@ -61,7 +61,7 @@ plugins/
 }
 ```
 
-- `name` — determines the skill namespace prefix (e.g., `dmk-oneteam:bootstrap`)
+- `name` — determines the skill namespace prefix (e.g., `dmk-oneteam:git-commit`)
 - `author` — **must be an object**, not a string. `{ "name": "...", "email": "..." }`
 
 ### `marketplace.json` — each plugin must point to its own `source`

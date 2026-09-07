@@ -59,7 +59,6 @@ npx skills add datamktkorea/agent-skills --skill git-commit -a <agent>
 
 ### `dmk-oneteam` — 모든 프로젝트가 함께 쓰는 범용 개발자 툴킷
 
-- **bootstrap** — 신규 스킬 온보딩 가이드
 - **git-commit** — Conventional Commits + Gitmoji 커밋 메시지 작성
 - **git-pull-request** — PR 제목/본문 자동 생성
 - **format-code-comments** — TS/Python에 한국어 주석·docstring 자동 작성
